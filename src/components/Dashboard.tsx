@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [showDictateModal, setShowDictateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSmartAddModal, setShowSmartAddModal] = useState(false);
+  const [showGreetingModal, setShowGreetingModal] = useState(false);
+  const [greetingData, setGreetingData] = useState<{ message: string, weekEvents: any[] } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
@@ -126,24 +128,10 @@ export default function Dashboard() {
     if (profile.lastGreetingDate !== today) {
       const todayEvents = events.filter(e => isToday(e.startTime));
       const message = `Hello ${profile.displayName || 'User'}, How are you today? You have ${todayEvents.length} appointments today. Do you want to update your Calendar Appointment?`;
+      const weekEvents = events.filter(e => isThisWeek(e.startTime) && !isToday(e.startTime));
       
-      speak(message);
-      
-      alert(message);
-      
-      setTimeout(() => {
-        const weekEvents = events.filter(e => isThisWeek(e.startTime) && !isToday(e.startTime));
-        if (weekEvents.length > 0) {
-          const askDictate = window.confirm('Do you want your appointments for the rest of the week dictated to you?');
-          if (askDictate) {
-            const dictationParts = ['For the rest of the week, you have: '];
-            weekEvents.forEach(e => {
-              dictationParts.push(`${e.title} on ${format(e.startTime, 'EEEE')} at ${format(e.startTime, 'h:mm a')}.`);
-            });
-            speak(dictationParts);
-          }
-        }
-      }, 5000);
+      setGreetingData({ message, weekEvents });
+      setShowGreetingModal(true);
 
       updateProfile({ lastGreetingDate: today });
       setGreetingShown(true);
@@ -336,10 +324,89 @@ export default function Dashboard() {
         <SmartAddModal onClose={() => setShowSmartAddModal(false)} />
       )}
 
+      {showGreetingModal && greetingData && (
+        <GreetingModal 
+          message={greetingData.message}
+          weekEvents={greetingData.weekEvents}
+          speak={speak}
+          onClose={() => setShowGreetingModal(false)}
+        />
+      )}
+
       <ReminderSystem />
 
       <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
         <AnimatedAvatar isSpeaking={isSpeaking} />
+      </div>
+    </div>
+  );
+}
+
+function GreetingModal({ message, weekEvents, speak, onClose }: { message: string, weekEvents: any[], speak: (text: string | string[]) => void, onClose: () => void }) {
+  const [step, setStep] = useState<'today' | 'week'>('today');
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center">
+        {step === 'today' ? (
+          <>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Welcome!</h2>
+            <p className="text-slate-600 mb-8">{message}</p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  speak(message);
+                  if (weekEvents.length > 0) {
+                    setTimeout(() => setStep('week'), 3000);
+                  } else {
+                    onClose();
+                  }
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
+              >
+                Listen
+              </button>
+              <button
+                onClick={() => {
+                  if (weekEvents.length > 0) {
+                    setStep('week');
+                  } else {
+                    onClose();
+                  }
+                }}
+                className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium"
+              >
+                Skip
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Rest of the Week</h2>
+            <p className="text-slate-600 mb-8">Do you want your appointments for the rest of the week dictated to you?</p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  const dictationParts = ['For the rest of the week, you have: '];
+                  weekEvents.forEach((e: any) => {
+                    dictationParts.push(`${e.title} on ${format(e.startTime, 'EEEE')} at ${format(e.startTime, 'h:mm a')}.`);
+                  });
+                  speak(dictationParts);
+                  onClose();
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
+              >
+                Yes, Dictate
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium"
+              >
+                No Thanks
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
