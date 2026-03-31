@@ -150,6 +150,31 @@ export default function Dashboard() {
     }
   }, [profile, loading, events, greetingShown, updateProfile]);
 
+  const components = React.useMemo(() => ({
+    month: {
+      dateCellWrapper: ({ value, children }: any) => {
+        const hasEvents = events.some(e => 
+          moment(e.startTime).isSame(value, 'day') || moment(e.endTime).isSame(value, 'day') || (moment(e.startTime).isBefore(value) && moment(e.endTime).isAfter(value))
+        );
+
+        return React.cloneElement(children as React.ReactElement, {
+          className: `${(children as React.ReactElement).props.className} relative ${hasEvents ? 'cursor-pointer hover:bg-slate-100 transition-colors' : ''}`,
+          onClick: () => {
+            if (hasEvents) {
+              setDate(value);
+              setView(Views.DAY);
+            }
+          },
+          children: (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {hasEvents && <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm"></div>}
+            </div>
+          )
+        });
+      }
+    }
+  }), [events, setDate, setView]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -247,6 +272,7 @@ export default function Dashboard() {
           <Calendar
             localizer={localizer}
             events={calendarEvents}
+            components={components}
             startAccessor="start"
             endAccessor="end"
             style={{ height: '100%' }}
