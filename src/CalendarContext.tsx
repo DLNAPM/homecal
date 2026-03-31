@@ -177,6 +177,10 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (event.snoozedUntil) {
         eventData.snoozedUntil = Timestamp.fromDate(event.snoozedUntil);
       }
+      
+      // Remove undefined fields to prevent Firestore errors
+      Object.keys(eventData).forEach(key => eventData[key] === undefined && delete eventData[key]);
+
       await addDoc(collection(db, 'events'), eventData);
     } catch (error) {
       console.error('Error adding event:', error);
@@ -205,6 +209,10 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (event.reminderMinutes === null) {
         updateData.reminderMinutes = null;
       }
+
+      // Remove undefined fields to prevent Firestore errors
+      Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
       await updateDoc(docRef, updateData);
     } catch (error) {
       console.error('Error updating event:', error);
