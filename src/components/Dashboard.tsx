@@ -1,13 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2 } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import AnimatedAvatar from './AnimatedAvatar';
+import UploadModal from './UploadModal';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 const localizer = momentLocalizer(moment);
 
@@ -19,17 +22,48 @@ export default function Dashboard() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showIntegrations, setShowIntegrations] = useState(false);
   const [showDictateModal, setShowDictateModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const speak = (text: string) => {
+  const speak = (text: string | string[]) => {
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
+    
+    if (Array.isArray(text)) {
+      if (text.length === 0) return;
+      
+      let currentIndex = 0;
+      
+      const playNext = () => {
+        if (currentIndex >= text.length) {
+          setIsSpeaking(false);
+          return;
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(text[currentIndex]);
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => {
+          currentIndex++;
+          if (currentIndex < text.length) {
+            setIsSpeaking(false);
+            setTimeout(playNext, 1000); // 1-second delay
+          } else {
+            setIsSpeaking(false);
+          }
+        };
+        utterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+      };
+      
+      playNext();
+    } else {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+    }
   };
 
   useEffect(() => {
@@ -49,11 +83,11 @@ export default function Dashboard() {
         if (weekEvents.length > 0) {
           const askDictate = window.confirm('Do you want your appointments for the rest of the week dictated to you?');
           if (askDictate) {
-            let dictation = 'For the rest of the week, you have: ';
+            const dictationParts = ['For the rest of the week, you have: '];
             weekEvents.forEach(e => {
-              dictation += `${e.title} on ${format(e.startTime, 'EEEE')} at ${format(e.startTime, 'h:mm a')}. `;
+              dictationParts.push(`${e.title} on ${format(e.startTime, 'EEEE')} at ${format(e.startTime, 'h:mm a')}.`);
             });
-            speak(dictation);
+            speak(dictationParts);
           }
         }
       }, 5000);
@@ -119,6 +153,13 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Your Calendar</h1>
           <div className="flex items-center gap-3">
             <button 
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+            >
+              <Upload className="h-4 w-4" />
+              Upload
+            </button>
+            <button 
               onClick={() => setShowDictateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
             >
@@ -166,6 +207,10 @@ export default function Dashboard() {
 
       {showDictateModal && (
         <DictateModal onClose={() => setShowDictateModal(false)} events={events} speak={speak} />
+      )}
+
+      {showUploadModal && (
+        <UploadModal onClose={() => setShowUploadModal(false)} />
       )}
 
       <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
@@ -569,7 +614,7 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
   );
 }
 
-function DictateModal({ onClose, events, speak }: { onClose: () => void, events: any[], speak: (text: string) => void }) {
+function DictateModal({ onClose, events, speak }: { onClose: () => void, events: any[], speak: (text: string | string[]) => void }) {
   const handleDictate = (range: 'day' | 'week' | 'month') => {
     const now = new Date();
     let filteredEvents = [];
@@ -592,12 +637,12 @@ function DictateModal({ onClose, events, speak }: { onClose: () => void, events:
     if (filteredEvents.length === 0) {
       speak(`You have no appointments for ${rangeText}.`);
     } else {
-      let dictation = `For ${rangeText}, you have ${filteredEvents.length} appointment${filteredEvents.length > 1 ? 's' : ''}: `;
+      const dictationParts = [`For ${rangeText}, you have ${filteredEvents.length} appointment${filteredEvents.length > 1 ? 's' : ''}.`];
       filteredEvents.forEach(e => {
         const dayStr = isToday(e.startTime) ? 'today' : format(e.startTime, 'EEEE, MMMM do');
-        dictation += `${e.title} ${dayStr} at ${format(e.startTime, 'h:mm a')}. `;
+        dictationParts.push(`${e.title} ${dayStr} at ${format(e.startTime, 'h:mm a')}.`);
       });
-      speak(dictation);
+      speak(dictationParts);
     }
     onClose();
   };
