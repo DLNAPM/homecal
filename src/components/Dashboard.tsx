@@ -146,6 +146,15 @@ export default function Dashboard() {
 
       return React.cloneElement(children as React.ReactElement, {
         className: `${(children as React.ReactElement).props.className} relative cursor-pointer hover:bg-slate-50 transition-colors`,
+        onClick: (e: React.MouseEvent) => {
+          if ((children as React.ReactElement).props.onClick) {
+            (children as React.ReactElement).props.onClick(e);
+          }
+          if (hasEvents) {
+            setDate(value);
+            setView(Views.DAY);
+          }
+        },
         children: (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pt-6">
             {hasEvents && <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>}
