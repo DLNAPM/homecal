@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithPopup } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from './firebase';
 import { UserProfile } from './types';
@@ -9,6 +9,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
@@ -24,21 +25,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const docRef = doc(db, 'users', currentUser.uid);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          setProfile(docSnap.data() as UserProfile);
-        } else {
-          const newProfile: UserProfile = {
+        if (currentUser.isAnonymous) {
+          setProfile({
             uid: currentUser.uid,
-            email: currentUser.email!,
-            displayName: currentUser.displayName || undefined,
-            photoURL: currentUser.photoURL || undefined,
+            email: 'guest@homecal.test',
+            displayName: 'Guest User',
             isPremium: false,
-          };
-          await setDoc(docRef, newProfile);
-          setProfile(newProfile);
+          });
+        } else {
+          const docRef = doc(db, 'users', currentUser.uid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            setProfile(docSnap.data() as UserProfile);
+          } else {
+            const newProfile: UserProfile = {
+              uid: currentUser.uid,
+              email: currentUser.email!,
+              displayName: currentUser.displayName || undefined,
+              photoURL: currentUser.photoURL || undefined,
+              isPremium: false,
+            };
+            await setDoc(docRef, newProfile);
+            setProfile(newProfile);
+          }
         }
       } else {
         setProfile(null);
@@ -58,19 +68,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInAsGuest = async () => {
+    try {
+      await signInAnonymously(auth);
+    } catch (error) {
+      console.error('Error signing in anonymously', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     await auth.signOut();
   };
 
   const updateProfile = async (data: Partial<UserProfile>) => {
-    if (!user || !profile) return;
+    if (!user || !profile || user.isAnonymous) return;
     const docRef = doc(db, 'users', user.uid);
     await setDoc(docRef, data, { merge: true });
     setProfile({ ...profile, ...data });
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut, updateProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signInAsGuest, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

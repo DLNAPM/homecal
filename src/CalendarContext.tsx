@@ -26,6 +26,31 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
+    if (user.isAnonymous) {
+      // Load test data for guest user
+      const now = new Date();
+      setEvents([
+        {
+          id: 'test-1',
+          ownerId: user.uid,
+          title: 'Welcome to HomeCal!',
+          description: 'This is a test event for your guest session.',
+          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0),
+          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0),
+        },
+        {
+          id: 'test-2',
+          ownerId: user.uid,
+          title: 'Lunch with Team',
+          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 30),
+          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 13, 30),
+          sharedWith: ['team@example.com']
+        }
+      ]);
+      setLoading(false);
+      return;
+    }
+
     const q1 = query(
       collection(db, 'events'),
       where('ownerId', '==', user.uid)
@@ -89,6 +114,17 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addEvent = async (event: Omit<CalendarEvent, 'id' | 'ownerId'>) => {
     if (!user) return;
+    
+    if (user.isAnonymous) {
+      const newEvent: CalendarEvent = {
+        ...event,
+        id: `guest-${Date.now()}`,
+        ownerId: user.uid,
+      };
+      setEvents(prev => [...prev, newEvent]);
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'events'), {
         ...event,
@@ -104,6 +140,12 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateEvent = async (id: string, event: Partial<CalendarEvent>) => {
     if (!user) return;
+
+    if (user.isAnonymous) {
+      setEvents(prev => prev.map(e => e.id === id ? { ...e, ...event } : e));
+      return;
+    }
+
     try {
       const docRef = doc(db, 'events', id);
       const updateData: any = { ...event };
@@ -118,6 +160,12 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const deleteEvent = async (id: string) => {
     if (!user) return;
+
+    if (user.isAnonymous) {
+      setEvents(prev => prev.filter(e => e.id !== id));
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'events', id));
     } catch (error) {

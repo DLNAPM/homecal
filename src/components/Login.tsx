@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { LogIn, ScanFace, Calendar } from 'lucide-react';
+import { LogIn, ScanFace, Calendar, UserCircle } from 'lucide-react';
 
 export default function Login() {
-  const { signInWithGoogle, loading } = useAuth();
+  const { signInWithGoogle, signInAsGuest, loading } = useAuth();
   const [error, setError] = useState('');
 
   const handleGoogleLogin = async () => {
@@ -11,6 +11,14 @@ export default function Login() {
       await signInWithGoogle();
     } catch (err) {
       setError('Failed to sign in with Google');
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    try {
+      await signInAsGuest();
+    } catch (err) {
+      setError('Failed to sign in as Guest');
     }
   };
 
@@ -51,6 +59,14 @@ export default function Login() {
           >
             <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
             Continue with Google
+          </button>
+
+          <button
+            onClick={handleGuestLogin}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium"
+          >
+            <UserCircle className="w-5 h-5 text-slate-500" />
+            Test Drive as Guest
           </button>
 
           <div className="relative">
