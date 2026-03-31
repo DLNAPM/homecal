@@ -69,14 +69,12 @@ export default function Login() {
           </p>
           
           <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-video shadow-2xl border border-slate-200 max-w-2xl mx-auto lg:mx-0">
-            <video
-              controls
+            <img
+              src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=1200&h=675"
+              alt="Calendar and Coffee"
               className="w-full h-full object-cover"
-              poster="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=1200&h=675"
-            >
-              <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
+              referrerPolicy="no-referrer"
+            />
           </div>
         </div>
 
