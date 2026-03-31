@@ -600,6 +600,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
   const [time, setTime] = useState('12:00');
   const [sharedWith, setSharedWith] = useState('');
   const [reminderMinutes, setReminderMinutes] = useState<number | ''>('');
+  const [reminderChime, setReminderChime] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -612,6 +613,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
       endTime: end,
       sharedWith: sharedWith ? sharedWith.split(',').map(s => s.trim()) : [],
       reminderMinutes: reminderMinutes === '' ? undefined : Number(reminderMinutes),
+      reminderChime,
     });
     
     onClose();
@@ -657,17 +659,30 @@ function EventModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Reminder</label>
-            <select
-              value={reminderMinutes}
-              onChange={e => setReminderMinutes(e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-            >
-              <option value="">No reminder</option>
-              <option value="5">5 minutes before</option>
-              <option value="15">15 minutes before</option>
-              <option value="30">30 minutes before</option>
-              <option value="60">1 hour before</option>
-            </select>
+            <div className="flex items-center gap-4">
+              <select
+                value={reminderMinutes}
+                onChange={e => setReminderMinutes(e.target.value === '' ? '' : Number(e.target.value))}
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+              >
+                <option value="">No reminder</option>
+                <option value="5">5 minutes before</option>
+                <option value="15">15 minutes before</option>
+                <option value="30">30 minutes before</option>
+                <option value="60">1 hour before</option>
+              </select>
+              {reminderMinutes !== '' && (
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={reminderChime}
+                    onChange={e => setReminderChime(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                  />
+                  Play Chime
+                </label>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Share with (emails, comma separated)</label>
@@ -704,6 +719,7 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
   const [time, setTime] = useState(format(event.startTime, 'HH:mm'));
   const [sharedWith, setSharedWith] = useState(event.sharedWith?.join(', ') || '');
   const [reminderMinutes, setReminderMinutes] = useState<number | ''>(event.reminderMinutes || '');
+  const [reminderChime, setReminderChime] = useState(event.reminderChime || false);
 
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
@@ -721,6 +737,7 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
       endTime: end,
       sharedWith: sharedWith ? sharedWith.split(',').map(s => s.trim()) : [],
       reminderMinutes: reminderMinutes === '' ? null : Number(reminderMinutes),
+      reminderChime,
       acknowledged: false, // Reset acknowledgment on edit
       snoozedUntil: null, // Reset snooze on edit
     });
@@ -783,18 +800,32 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Reminder</label>
-            <select
-              value={reminderMinutes}
-              disabled={isConnectedEvent}
-              onChange={e => setReminderMinutes(e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white disabled:opacity-50 disabled:bg-slate-50"
-            >
-              <option value="">No reminder</option>
-              <option value="5">5 minutes before</option>
-              <option value="15">15 minutes before</option>
-              <option value="30">30 minutes before</option>
-              <option value="60">1 hour before</option>
-            </select>
+            <div className="flex items-center gap-4">
+              <select
+                value={reminderMinutes}
+                disabled={isConnectedEvent}
+                onChange={e => setReminderMinutes(e.target.value === '' ? '' : Number(e.target.value))}
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white disabled:opacity-50 disabled:bg-slate-50"
+              >
+                <option value="">No reminder</option>
+                <option value="5">5 minutes before</option>
+                <option value="15">15 minutes before</option>
+                <option value="30">30 minutes before</option>
+                <option value="60">1 hour before</option>
+              </select>
+              {reminderMinutes !== '' && (
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    disabled={isConnectedEvent}
+                    checked={reminderChime}
+                    onChange={e => setReminderChime(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 disabled:opacity-50"
+                  />
+                  Play Chime
+                </label>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Share with (emails, comma separated)</label>

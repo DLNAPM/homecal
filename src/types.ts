@@ -26,6 +26,7 @@ export interface CalendarEvent {
   endTime: Date;
   sharedWith?: string[];
   reminderMinutes?: number | null;
+  reminderChime?: boolean;
   acknowledged?: boolean;
   snoozedUntil?: Date | null;
 }

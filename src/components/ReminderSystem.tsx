@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { CalendarEvent } from '../types';
 import { useCalendar } from '../CalendarContext';
 import { Bell, Clock, Check } from 'lucide-react';
@@ -7,6 +7,60 @@ import { format } from 'date-fns';
 export default function ReminderSystem() {
   const { events, updateEvent } = useCalendar();
   const [activeReminders, setActiveReminders] = useState<CalendarEvent[]>([]);
+  const activeChimesRef = useRef<{ [eventId: string]: { stop: () => void } }>({});
+
+  const playChimeForEvent = (eventId: string) => {
+    if (activeChimesRef.current[eventId]) return;
+
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const audioCtx = new AudioContextClass();
+      
+      const playBeep = () => {
+        if (audioCtx.state === 'closed') return;
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+        oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.5);
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.5);
+      };
+
+      // Play immediately, then repeat every 2 seconds
+      playBeep();
+      const interval = setInterval(playBeep, 2000);
+
+      activeChimesRef.current[eventId] = {
+        stop: () => {
+          clearInterval(interval);
+          if (audioCtx.state !== 'closed') {
+            audioCtx.close().catch(() => {});
+          }
+        }
+      };
+    } catch (e) {
+      console.error("Failed to play chime:", e);
+    }
+  };
+
+  const stopChimeForEvent = (eventId: string) => {
+    if (activeChimesRef.current[eventId]) {
+      activeChimesRef.current[eventId].stop();
+      delete activeChimesRef.current[eventId];
+    }
+  };
 
   useEffect(() => {
     const checkReminders = () => {
@@ -14,7 +68,10 @@ export default function ReminderSystem() {
       const triggered: CalendarEvent[] = [];
 
       events.forEach(event => {
-        if (!event.reminderMinutes || event.acknowledged) return;
+        if (!event.reminderMinutes || event.acknowledged) {
+          stopChimeForEvent(event.id);
+          return;
+        }
 
         const reminderTime = new Date(event.startTime.getTime() - event.reminderMinutes * 60000);
         
@@ -24,11 +81,28 @@ export default function ReminderSystem() {
           if (event.snoozedUntil) {
             if (now >= event.snoozedUntil) {
               triggered.push(event);
+            } else {
+              stopChimeForEvent(event.id);
             }
           } else {
             // Not snoozed, trigger it
             triggered.push(event);
           }
+        }
+      });
+
+      // Handle chimes for newly triggered events
+      triggered.forEach(event => {
+        if (event.reminderChime) {
+          playChimeForEvent(event.id);
+        }
+      });
+
+      // Stop chimes for events that are no longer triggered
+      const triggeredIds = new Set(triggered.map(e => e.id));
+      Object.keys(activeChimesRef.current).forEach(id => {
+        if (!triggeredIds.has(id)) {
+          stopChimeForEvent(id);
         }
       });
 
@@ -44,14 +118,21 @@ export default function ReminderSystem() {
     // Check immediately and then every 10 seconds
     checkReminders();
     const interval = setInterval(checkReminders, 10000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      // Cleanup all chimes on unmount
+      Object.keys(activeChimesRef.current).forEach(stopChimeForEvent);
+    };
   }, [events]);
 
   const handleAcknowledge = async (eventId: string) => {
+    stopChimeForEvent(eventId);
     await updateEvent(eventId, { acknowledged: true });
   };
 
   const handleSnooze = async (eventId: string, minutes: number) => {
+    stopChimeForEvent(eventId);
     const snoozedUntil = new Date(Date.now() + minutes * 60000);
     await updateEvent(eventId, { snoozedUntil });
   };
