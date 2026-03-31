@@ -70,15 +70,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInAsGuest = async () => {
     try {
-      await signInAnonymously(auth);
+      // Create a mock guest user to avoid requiring Firebase Anonymous Auth to be enabled
+      const guestUid = `guest-${Date.now()}`;
+      const mockGuestUser = {
+        uid: guestUid,
+        email: 'guest@homecal.test',
+        isAnonymous: true,
+        displayName: 'Guest User',
+        photoURL: null,
+      } as unknown as User;
+
+      setUser(mockGuestUser);
+      setProfile({
+        uid: guestUid,
+        email: 'guest@homecal.test',
+        displayName: 'Guest User',
+        isPremium: false,
+      });
     } catch (error) {
-      console.error('Error signing in anonymously', error);
+      console.error('Error signing in as guest', error);
       throw error;
     }
   };
 
   const signOut = async () => {
-    await auth.signOut();
+    if (user?.isAnonymous) {
+      setUser(null);
+      setProfile(null);
+    } else {
+      await auth.signOut();
+    }
   };
 
   const updateProfile = async (data: Partial<UserProfile>) => {

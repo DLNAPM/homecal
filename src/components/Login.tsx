@@ -86,6 +86,24 @@ export default function Login() {
             Face Login
           </button>
         </div>
+
+        <div className="pt-8 mt-8 border-t border-slate-100">
+          <div className="text-center mb-4">
+            <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">What is HomeCal?</h3>
+            <p className="text-xs text-slate-500 mt-1">Watch this quick 30-second guide on how to use the app.</p>
+          </div>
+          <div className="relative rounded-xl overflow-hidden bg-slate-900 aspect-video shadow-md border border-slate-200">
+            <video
+              controls
+              className="w-full h-full object-cover"
+              poster="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=640&h=360"
+            >
+              {/* Placeholder video. Replace with actual 30s screencast of the app */}
+              <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
       </div>
     </div>
   );
