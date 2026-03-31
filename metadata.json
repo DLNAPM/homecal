@@ -1,0 +1,5 @@
+{
+  "name": "HomeCal",
+  "description": "An electronic calendar and planner with voice assistant and sharing capabilities.",
+  "requestFramePermissions": ["microphone"]
+}

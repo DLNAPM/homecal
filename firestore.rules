@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - User's UID
+    //   - email: string (required) - User's email
+    //   - displayName: string (optional) - User's name
+    //   - photoURL: string (optional) - User's photo URL
+    //   - isPremium: boolean (optional) - Premium status
+    //   - lastGreetingDate: string (optional) - YYYY-MM-DD
+    //   - webAuthnCredentialId: string (optional) - Biometric ID
+    //   - webAuthnPublicKey: string (optional) - Biometric key
+    //
+    // Collection: events
+    // Document ID: {eventId}
+    // Fields:
+    //   - ownerId: string (required) - Creator's UID
+    //   - title: string (required) - Event title
+    //   - description: string (optional) - Event description
+    //   - startTime: timestamp (required) - Start time
+    //   - endTime: timestamp (required) - End time
+    //   - sharedWith: list of strings (optional) - Emails shared with
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.ownerId;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidList(list, maxSize) {
+      return list is list && list.size() <= maxSize;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000)) &&
+             (!('isPremium' in data) || data.isPremium is bool) &&
+             (!('lastGreetingDate' in data) || (data.lastGreetingDate is string && data.lastGreetingDate.size() < 20)) &&
+             (!('webAuthnCredentialId' in data) || (data.webAuthnCredentialId is string && data.webAuthnCredentialId.size() < 1000)) &&
+             (!('webAuthnPublicKey' in data) || (data.webAuthnPublicKey is string && data.webAuthnPublicKey.size() < 2000));
+    }
+
+    function isValidEvent(data) {
+      return hasRequiredFields(['ownerId', 'title', 'startTime', 'endTime']) &&
+             data.ownerId is string && data.ownerId.size() > 0 && data.ownerId.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 2000)) &&
+             data.startTime is timestamp &&
+             data.endTime is timestamp &&
+             (!('sharedWith' in data) || isValidList(data.sharedWith, 50));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged();
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && uidNotModified();
+      allow delete: if isOwner(userId);
+    }
+
+    match /events/{eventId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.ownerId || request.auth.token.email in resource.data.sharedWith);
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.ownerId && isValidEvent(request.resource.data);
+      allow update: if isDocOwner() && isValidEvent(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isDocOwner();
+    }
+  }
+}
