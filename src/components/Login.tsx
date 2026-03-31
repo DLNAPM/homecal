@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { LogIn, ScanFace, Calendar, UserCircle } from 'lucide-react';
+import { LogIn, ScanFace, Calendar, UserCircle, HelpCircle } from 'lucide-react';
+import HelpModal from './HelpModal';
 
 export default function Login() {
   const { signInWithGoogle, signInAsGuest, loading } = useAuth();
   const [error, setError] = useState('');
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const handleGoogleLogin = async () => {
     try {
@@ -40,7 +42,15 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 relative">
+      <button
+        onClick={() => setShowHelpModal(true)}
+        className="absolute top-6 right-6 p-3 bg-white text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full shadow-sm transition-colors border border-slate-200"
+        title="Help & Information"
+      >
+        <HelpCircle className="w-6 h-6" />
+      </button>
+
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-8">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
@@ -109,6 +119,8 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
@@ -11,6 +11,7 @@ import AnimatedAvatar from './AnimatedAvatar';
 import UploadModal from './UploadModal';
 import SmartAddModal from './SmartAddModal';
 import ReminderSystem from './ReminderSystem';
+import HelpModal from './HelpModal';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -28,6 +29,7 @@ export default function Dashboard() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSmartAddModal, setShowSmartAddModal] = useState(false);
   const [showGreetingModal, setShowGreetingModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [greetingData, setGreetingData] = useState<{ message: string, weekEvents: any[] } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [view, setView] = useState<View>(Views.MONTH);
@@ -210,6 +212,13 @@ export default function Dashboard() {
             >
               <Settings className="h-5 w-5" />
             </button>
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+              title="Help & Information"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button>
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               {profile?.photoURL && (
                 <img src={profile.photoURL} alt="Profile" className="h-8 w-8 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
@@ -341,6 +350,8 @@ export default function Dashboard() {
           onClose={() => setShowGreetingModal(false)}
         />
       )}
+
+      {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
 
       <ReminderSystem />
 
