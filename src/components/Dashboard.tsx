@@ -30,7 +30,7 @@ export default function Dashboard() {
   const [showSmartAddModal, setShowSmartAddModal] = useState(false);
   const [showGreetingModal, setShowGreetingModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [greetingData, setGreetingData] = useState<{ message: string, weekEvents: any[] } | null>(null);
+  const [greetingData, setGreetingData] = useState<{ message: string, todayEvents: any[], weekEvents: any[] } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
@@ -74,45 +74,61 @@ export default function Dashboard() {
     }
   };
 
-  const speak = (text: string | string[]) => {
-    window.speechSynthesis.cancel();
-    
-    if (Array.isArray(text)) {
-      if (text.length === 0) return;
+  const speak = (text: string | string[]): Promise<void> => {
+    return new Promise((resolve) => {
+      window.speechSynthesis.cancel();
       
-      let currentIndex = 0;
-      
-      const playNext = () => {
-        if (currentIndex >= text.length) {
-          setIsSpeaking(false);
+      if (Array.isArray(text)) {
+        if (text.length === 0) {
+          resolve();
           return;
         }
         
-        const utterance = new SpeechSynthesisUtterance(text[currentIndex]);
+        let currentIndex = 0;
+        
+        const playNext = () => {
+          if (currentIndex >= text.length) {
+            setIsSpeaking(false);
+            resolve();
+            return;
+          }
+          
+          const utterance = new SpeechSynthesisUtterance(text[currentIndex]);
+          applyVoice(utterance);
+          utterance.onstart = () => setIsSpeaking(true);
+          utterance.onend = () => {
+            currentIndex++;
+            if (currentIndex < text.length) {
+              setIsSpeaking(false);
+              setTimeout(playNext, 1000); // 1-second delay
+            } else {
+              setIsSpeaking(false);
+              resolve();
+            }
+          };
+          utterance.onerror = () => {
+            setIsSpeaking(false);
+            resolve();
+          };
+          window.speechSynthesis.speak(utterance);
+        };
+        
+        playNext();
+      } else {
+        const utterance = new SpeechSynthesisUtterance(text);
         applyVoice(utterance);
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => {
-          currentIndex++;
-          if (currentIndex < text.length) {
-            setIsSpeaking(false);
-            setTimeout(playNext, 1000); // 1-second delay
-          } else {
-            setIsSpeaking(false);
-          }
+          setIsSpeaking(false);
+          resolve();
         };
-        utterance.onerror = () => setIsSpeaking(false);
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          resolve();
+        };
         window.speechSynthesis.speak(utterance);
-      };
-      
-      playNext();
-    } else {
-      const utterance = new SpeechSynthesisUtterance(text);
-      applyVoice(utterance);
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    }
+      }
+    });
   };
 
   useEffect(() => {
@@ -129,10 +145,10 @@ export default function Dashboard() {
     const today = format(new Date(), 'yyyy-MM-dd');
     if (profile.lastGreetingDate !== today) {
       const todayEvents = events.filter(e => isToday(e.startTime));
-      const message = `Hello ${profile.displayName || 'User'}, How are you today? You have ${todayEvents.length} appointments today. Do you want to update your Calendar Appointment?`;
+      const message = `Hello ${profile.displayName || 'User'}, How are you today? You have ${todayEvents.length} appointments today. Do you want to hear your appointments for today?`;
       const weekEvents = events.filter(e => isThisWeek(e.startTime) && !isToday(e.startTime));
       
-      setGreetingData({ message, weekEvents });
+      setGreetingData({ message, todayEvents, weekEvents });
       setShowGreetingModal(true);
 
       updateProfile({ lastGreetingDate: today });
@@ -146,11 +162,11 @@ export default function Dashboard() {
         moment(e.startTime).isSame(value, 'day') || moment(e.endTime).isSame(value, 'day') || (moment(e.startTime).isBefore(value) && moment(e.endTime).isAfter(value))
       );
 
-      return React.cloneElement(children as React.ReactElement, {
-        className: `${(children as React.ReactElement).props.className} relative cursor-pointer hover:bg-slate-50 transition-colors`,
+      return React.cloneElement(children as React.ReactElement<any>, {
+        className: `${(children as React.ReactElement<any>).props.className} relative cursor-pointer hover:bg-slate-50 transition-colors`,
         onClick: (e: React.MouseEvent) => {
-          if ((children as React.ReactElement).props.onClick) {
-            (children as React.ReactElement).props.onClick(e);
+          if ((children as React.ReactElement<any>).props.onClick) {
+            (children as React.ReactElement<any>).props.onClick(e);
           }
           if (hasEvents) {
             setDate(value);
@@ -345,6 +361,7 @@ export default function Dashboard() {
       {showGreetingModal && greetingData && (
         <GreetingModal 
           message={greetingData.message}
+          todayEvents={greetingData.todayEvents}
           weekEvents={greetingData.weekEvents}
           speak={speak}
           onClose={() => setShowGreetingModal(false)}
@@ -362,38 +379,138 @@ export default function Dashboard() {
   );
 }
 
-function GreetingModal({ message, weekEvents, speak, onClose }: { message: string, weekEvents: any[], speak: (text: string | string[]) => void, onClose: () => void }) {
-  const [step, setStep] = useState<'today' | 'week'>('today');
+function GreetingModal({ message, todayEvents, weekEvents, speak, onClose }: { message: string, todayEvents: any[], weekEvents: any[], speak: (text: string | string[]) => Promise<void>, onClose: () => void }) {
+  const [step, setStep] = useState<'init' | 'today' | 'week' | 'done'>('init');
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const isCancelled = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      isCancelled.current = true;
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  const startListeningForResponse = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (isCancelled.current) {
+        resolve(false);
+        return;
+      }
+
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        resolve(false);
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      let finalResult = '';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setTranscript('');
+      };
+
+      recognition.onresult = (event: any) => {
+        let currentTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalResult += event.results[i][0].transcript;
+          } else {
+            currentTranscript += event.results[i][0].transcript;
+          }
+        }
+        setTranscript(finalResult || currentTranscript);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+        resolve(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        if (isCancelled.current) {
+          resolve(false);
+          return;
+        }
+        const lowerResult = finalResult.toLowerCase();
+        if (lowerResult.includes('yes') || lowerResult.includes('yeah') || lowerResult.includes('sure') || lowerResult.includes('yep') || lowerResult.includes('ok') || lowerResult.includes('please')) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      };
+
+      recognition.start();
+    });
+  };
+
+  const handleStart = async () => {
+    setStep('today');
+    await speak(message);
+    if (isCancelled.current) return;
+    
+    const wantsToday = await startListeningForResponse();
+    if (isCancelled.current) return;
+    
+    if (wantsToday) {
+      if (todayEvents.length > 0) {
+        const todayDictation = ['For today, you have: '];
+        todayEvents.forEach((e: any) => {
+          todayDictation.push(`${e.title} at ${format(e.startTime, 'h:mm a')}.`);
+        });
+        await speak(todayDictation);
+      } else {
+        await speak("You have no appointments today.");
+      }
+    }
+    if (isCancelled.current) return;
+    
+    if (weekEvents.length > 0) {
+      setStep('week');
+      await speak("Do you want your appointments for the rest of the week dictated to you?");
+      if (isCancelled.current) return;
+      
+      const wantsWeek = await startListeningForResponse();
+      if (isCancelled.current) return;
+      
+      if (wantsWeek) {
+        const weekDictation = ['For the rest of the week, you have: '];
+        weekEvents.forEach((e: any) => {
+          weekDictation.push(`${e.title} on ${format(e.startTime, 'EEEE')} at ${format(e.startTime, 'h:mm a')}.`);
+        });
+        await speak(weekDictation);
+      }
+    }
+    if (isCancelled.current) return;
+    
+    await speak("Okay, have a great day!");
+    if (!isCancelled.current) {
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center">
-        {step === 'today' ? (
+        {step === 'init' ? (
           <>
             <h2 className="text-2xl font-bold text-slate-900 mb-4">Welcome!</h2>
-            <p className="text-slate-600 mb-8">{message}</p>
+            <p className="text-slate-600 mb-8">You have new updates for today.</p>
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => {
-                  speak(message);
-                  if (weekEvents.length > 0) {
-                    setTimeout(() => setStep('week'), 3000);
-                  } else {
-                    onClose();
-                  }
-                }}
+                onClick={handleStart}
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
               >
-                Listen
+                Start Daily Briefing
               </button>
               <button
-                onClick={() => {
-                  if (weekEvents.length > 0) {
-                    setStep('week');
-                  } else {
-                    onClose();
-                  }
-                }}
+                onClick={onClose}
                 className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium"
               >
                 Skip
@@ -402,29 +519,36 @@ function GreetingModal({ message, weekEvents, speak, onClose }: { message: strin
           </>
         ) : (
           <>
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Rest of the Week</h2>
-            <p className="text-slate-600 mb-8">Do you want your appointments for the rest of the week dictated to you?</p>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={() => {
-                  const dictationParts = ['For the rest of the week, you have: '];
-                  weekEvents.forEach((e: any) => {
-                    dictationParts.push(`${e.title} on ${format(e.startTime, 'EEEE')} at ${format(e.startTime, 'h:mm a')}.`);
-                  });
-                  speak(dictationParts);
-                  onClose();
-                }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
-              >
-                Yes, Dictate
-              </button>
-              <button
-                onClick={onClose}
-                className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium"
-              >
-                No Thanks
-              </button>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">
+              {step === 'today' ? "Today's Briefing" : "Week's Briefing"}
+            </h2>
+            <div className="flex flex-col items-center justify-center py-8 min-h-[200px]">
+              {isListening ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                    <Mic className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <p className="text-blue-600 font-medium">Listening for your response...</p>
+                  {transcript && <p className="text-slate-500 mt-4 italic">"{transcript}"</p>}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <Volume2 className="w-8 h-8 text-slate-600" />
+                  </div>
+                  <p className="text-slate-600 font-medium">Speaking...</p>
+                </div>
+              )}
             </div>
+            <button
+              onClick={() => {
+                window.speechSynthesis.cancel();
+                onClose();
+              }}
+              className="mt-4 px-6 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium text-sm"
+            >
+              Cancel
+            </button>
           </>
         )}
       </div>
@@ -894,6 +1018,7 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [processing, setProcessing] = useState(false);
+  const transcriptRef = useRef('');
   const { addEvent } = useCalendar();
 
   const startListening = () => {
@@ -910,12 +1035,16 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
     recognition.onstart = () => {
       setListening(true);
       setTranscript('');
+      transcriptRef.current = '';
     };
 
     recognition.onresult = (event: any) => {
-      const current = event.resultIndex;
-      const result = event.results[current][0].transcript;
-      setTranscript(result);
+      let fullTranscript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        fullTranscript += event.results[i][0].transcript;
+      }
+      setTranscript(fullTranscript);
+      transcriptRef.current = fullTranscript;
     };
 
     recognition.onerror = (event: any) => {
@@ -925,8 +1054,8 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
 
     recognition.onend = () => {
       setListening(false);
-      if (transcript) {
-        processTranscript(transcript);
+      if (transcriptRef.current) {
+        processTranscript(transcriptRef.current);
       }
     };
 
@@ -958,7 +1087,18 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
         }
       });
 
-      const parsed = JSON.parse(response.text || '{}');
+      let responseText = response.text || '{}';
+      // Strip markdown code blocks if present
+      if (responseText.startsWith('```')) {
+        const match = responseText.match(/```(?:json)?\n([\s\S]*?)\n```/);
+        if (match && match[1]) {
+          responseText = match[1];
+        } else {
+          responseText = responseText.replace(/```(?:json)?\n/g, '').replace(/\n```/g, '');
+        }
+      }
+      
+      const parsed = JSON.parse(responseText);
       
       const event = {
         title: parsed.title || text || 'New Voice Appointment',
