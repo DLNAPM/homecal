@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings } from 'lucide-react';
-import { format, isToday, isThisWeek } from 'date-fns';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2 } from 'lucide-react';
+import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
 import moment from 'moment';
@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showIntegrations, setShowIntegrations] = useState(false);
+  const [showDictateModal, setShowDictateModal] = useState(false);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
 
@@ -107,13 +108,22 @@ export default function Dashboard() {
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold text-slate-900">Your Calendar</h1>
-          <button 
-            onClick={() => setShowEventModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shadow-sm"
-          >
-            <Plus className="h-4 w-4" />
-            New Event
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowDictateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+            >
+              <Volume2 className="h-4 w-4" />
+              Dictate Agenda
+            </button>
+            <button 
+              onClick={() => setShowEventModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              New Event
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex-1 min-h-[600px]">
@@ -143,6 +153,10 @@ export default function Dashboard() {
 
       {showIntegrations && (
         <IntegrationsModal onClose={() => setShowIntegrations(false)} />
+      )}
+
+      {showDictateModal && (
+        <DictateModal onClose={() => setShowDictateModal(false)} events={events} />
       )}
     </div>
   );
@@ -397,6 +411,68 @@ function VoiceAssistantModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DictateModal({ onClose, events }: { onClose: () => void, events: any[] }) {
+  const handleDictate = (range: 'day' | 'week' | 'month') => {
+    const now = new Date();
+    let filteredEvents = [];
+    let rangeText = '';
+
+    if (range === 'day') {
+      filteredEvents = events.filter(e => isToday(e.startTime) && e.startTime >= now);
+      rangeText = 'the rest of the day';
+    } else if (range === 'week') {
+      filteredEvents = events.filter(e => isThisWeek(e.startTime) && e.startTime >= now);
+      rangeText = 'the rest of the week';
+    } else if (range === 'month') {
+      filteredEvents = events.filter(e => isThisMonth(e.startTime) && e.startTime >= now);
+      rangeText = 'the rest of the month';
+    }
+
+    // Sort events by start time
+    filteredEvents.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+    if (filteredEvents.length === 0) {
+      const utterance = new SpeechSynthesisUtterance(`You have no appointments for ${rangeText}.`);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      let dictation = `For ${rangeText}, you have ${filteredEvents.length} appointment${filteredEvents.length > 1 ? 's' : ''}: `;
+      filteredEvents.forEach(e => {
+        const dayStr = isToday(e.startTime) ? 'today' : format(e.startTime, 'EEEE, MMMM do');
+        dictation += `${e.title} ${dayStr} at ${format(e.startTime, 'h:mm a')}. `;
+      });
+      const utterance = new SpeechSynthesisUtterance(dictation);
+      window.speechSynthesis.speak(utterance);
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 relative">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">Dictate Agenda</h2>
+        <p className="text-slate-500 mb-6">Select a timeframe to hear your upcoming appointments.</p>
+        <div className="space-y-3">
+          <button onClick={() => handleDictate('day')} className="w-full py-3 px-4 bg-blue-50 text-blue-700 rounded-xl font-medium hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
+            <Volume2 className="w-5 h-5" /> Rest of the Day
+          </button>
+          <button onClick={() => handleDictate('week')} className="w-full py-3 px-4 bg-blue-50 text-blue-700 rounded-xl font-medium hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
+            <Volume2 className="w-5 h-5" /> Rest of the Week
+          </button>
+          <button onClick={() => handleDictate('month')} className="w-full py-3 px-4 bg-blue-50 text-blue-700 rounded-xl font-medium hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
+            <Volume2 className="w-5 h-5" /> Rest of the Month
+          </button>
+        </div>
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"

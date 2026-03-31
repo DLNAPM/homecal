@@ -35,16 +35,37 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ownerId: user.uid,
           title: 'Welcome to HomeCal!',
           description: 'This is a test event for your guest session.',
-          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0),
-          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0),
+          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0),
+          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 2, 0),
         },
         {
           id: 'test-2',
+          ownerId: user.uid,
+          title: 'Project Sync',
+          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 4, 30),
+          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 5, 0),
+        },
+        {
+          id: 'test-3',
           ownerId: user.uid,
           title: 'Lunch with Team',
           startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 30),
           endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 13, 30),
           sharedWith: ['team@example.com']
+        },
+        {
+          id: 'test-4',
+          ownerId: user.uid,
+          title: 'Weekly Review',
+          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 10, 0),
+          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 11, 0),
+        },
+        {
+          id: 'test-5',
+          ownerId: user.uid,
+          title: 'Dentist Appointment',
+          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10, 15, 0),
+          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10, 16, 0),
         }
       ]);
       setLoading(false);
