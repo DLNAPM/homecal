@@ -209,36 +209,36 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <h1 className="text-2xl font-bold text-slate-900">Your Calendar</h1>
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 sm:gap-3">
             <button 
               onClick={() => setShowSmartAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
             >
               <Sparkles className="h-4 w-4 text-blue-600" />
-              Smart Add
+              <span className="truncate">Smart Add</span>
             </button>
             <button 
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
             >
               <Upload className="h-4 w-4" />
-              Upload
+              <span className="truncate">Upload</span>
             </button>
             <button 
               onClick={() => setShowDictateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
             >
               <Volume2 className="h-4 w-4" />
-              Dictate Agenda
+              <span className="truncate">Dictate Agenda</span>
             </button>
             <button 
               onClick={() => setShowEventModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shadow-sm"
             >
               <Plus className="h-4 w-4" />
-              New Event
+              <span className="truncate">New Event</span>
             </button>
           </div>
         </div>
