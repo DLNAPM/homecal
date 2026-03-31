@@ -151,26 +151,24 @@ export default function Dashboard() {
   }, [profile, loading, events, greetingShown, updateProfile]);
 
   const components = React.useMemo(() => ({
+    dateCellWrapper: ({ value, children }: any) => {
+      return React.cloneElement(children as React.ReactElement, {
+        className: `${(children as React.ReactElement).props.className} cursor-pointer hover:bg-slate-100 transition-colors`,
+      });
+    },
     month: {
-      dateCellWrapper: ({ value, children }: any) => {
+      dateHeader: ({ date, label }: any) => {
         const hasEvents = events.some(e => 
-          moment(e.startTime).isSame(value, 'day') || moment(e.endTime).isSame(value, 'day') || (moment(e.startTime).isBefore(value) && moment(e.endTime).isAfter(value))
+          moment(e.startTime).isSame(date, 'day') || moment(e.endTime).isSame(date, 'day') || (moment(e.startTime).isBefore(date) && moment(e.endTime).isAfter(date))
         );
-
-        return React.cloneElement(children as React.ReactElement, {
-          className: `${(children as React.ReactElement).props.className} relative ${hasEvents ? 'cursor-pointer hover:bg-slate-100 transition-colors' : ''}`,
-          onClick: () => {
-            if (hasEvents) {
-              setDate(value);
-              setView(Views.DAY);
-            }
-          },
-          children: (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              {hasEvents && <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm"></div>}
+        return (
+          <div className="flex flex-col items-center justify-center p-1 pointer-events-none">
+            <span className="text-sm font-medium text-slate-700">{label}</span>
+            <div className="h-2 mt-1">
+              {hasEvents && <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>}
             </div>
-          )
-        });
+          </div>
+        );
       }
     }
   }), [events, setDate, setView]);
@@ -183,7 +181,7 @@ export default function Dashboard() {
     );
   }
 
-  const calendarEvents = events.map(e => ({
+  const calendarEvents = view === Views.MONTH ? [] : events.map(e => ({
     id: e.id,
     title: e.title,
     start: e.startTime,
@@ -282,6 +280,32 @@ export default function Dashboard() {
             onNavigate={setDate}
             views={['month', 'week', 'day', 'agenda']}
             onSelectEvent={(event) => setSelectedEvent(event.resource)}
+            selectable={true}
+            onDrillDown={(date) => {
+              if (view === Views.MONTH) {
+                const hasEvents = events.some(e => 
+                  moment(e.startTime).isSame(date, 'day') || moment(e.endTime).isSame(date, 'day') || (moment(e.startTime).isBefore(date) && moment(e.endTime).isAfter(date))
+                );
+                if (hasEvents) {
+                  setDate(date);
+                  setView(Views.DAY);
+                }
+              } else {
+                setDate(date);
+                setView(Views.DAY);
+              }
+            }}
+            onSelectSlot={(slotInfo) => {
+              if (view === Views.MONTH && slotInfo.action === 'click') {
+                const hasEvents = events.some(e => 
+                  moment(e.startTime).isSame(slotInfo.start, 'day') || moment(e.endTime).isSame(slotInfo.start, 'day') || (moment(e.startTime).isBefore(slotInfo.start) && moment(e.endTime).isAfter(slotInfo.start))
+                );
+                if (hasEvents) {
+                  setDate(slotInfo.start);
+                  setView(Views.DAY);
+                }
+              }
+            }}
           />
         </div>
       </main>

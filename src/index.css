@@ -1,12 +1,5 @@
 @import "tailwindcss";
 
-/* Month view custom styling */
-.rbc-month-view .rbc-row-content {
-  pointer-events: none;
-}
-.rbc-month-view .rbc-row-content .rbc-date-cell {
-  pointer-events: auto;
-}
-.rbc-month-view .rbc-row-content .rbc-row:not(:first-child) {
-  display: none;
+.rbc-month-view .rbc-selected-cell {
+  background-color: transparent !important;
 }
