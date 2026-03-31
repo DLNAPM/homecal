@@ -152,26 +152,20 @@ export default function Dashboard() {
 
   const components = React.useMemo(() => ({
     dateCellWrapper: ({ value, children }: any) => {
+      const hasEvents = events.some(e => 
+        moment(e.startTime).isSame(value, 'day') || moment(e.endTime).isSame(value, 'day') || (moment(e.startTime).isBefore(value) && moment(e.endTime).isAfter(value))
+      );
+
       return React.cloneElement(children as React.ReactElement, {
-        className: `${(children as React.ReactElement).props.className} cursor-pointer hover:bg-slate-100 transition-colors`,
-      });
-    },
-    month: {
-      dateHeader: ({ date, label }: any) => {
-        const hasEvents = events.some(e => 
-          moment(e.startTime).isSame(date, 'day') || moment(e.endTime).isSame(date, 'day') || (moment(e.startTime).isBefore(date) && moment(e.endTime).isAfter(date))
-        );
-        return (
-          <div className="flex flex-col items-center justify-center p-1 pointer-events-none">
-            <span className="text-sm font-medium text-slate-700">{label}</span>
-            <div className="h-2 mt-1">
-              {hasEvents && <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>}
-            </div>
+        className: `${(children as React.ReactElement).props.className} relative cursor-pointer hover:bg-slate-50 transition-colors`,
+        children: (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pt-6">
+            {hasEvents && <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>}
           </div>
-        );
-      }
+        )
+      });
     }
-  }), [events, setDate, setView]);
+  }), [events]);
 
   if (loading) {
     return (
@@ -266,14 +260,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex-1 min-h-[600px]">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex-1 min-h-[600px] flex flex-col">
           <Calendar
             localizer={localizer}
             events={calendarEvents}
             components={components}
             startAccessor="start"
             endAccessor="end"
-            style={{ height: '100%' }}
+            style={{ flex: 1, minHeight: '500px' }}
             view={view}
             onView={setView}
             date={date}
