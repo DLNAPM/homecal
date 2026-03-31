@@ -8,6 +8,7 @@ export interface UserProfile {
   webAuthnCredentialId?: string;
   webAuthnPublicKey?: string;
   connectedCalendars?: string[];
+  voicePreference?: 'male' | 'female';
   integrationConfigs?: {
     [provider: string]: {
       clientId?: string;

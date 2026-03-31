@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
@@ -22,12 +22,51 @@ export default function Dashboard() {
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showIntegrations, setShowIntegrations] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showDictateModal, setShowDictateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const applyVoice = (utterance: SpeechSynthesisUtterance) => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) return;
+    
+    const preference = profile?.voicePreference || 'female';
+    
+    let voice = null;
+    if (preference === 'male') {
+      voice = voices.find(v => 
+        v.name.toLowerCase().includes('male') || 
+        v.name.toLowerCase().includes('guy') || 
+        v.name.toLowerCase().includes('david') || 
+        v.name.toLowerCase().includes('mark') ||
+        v.name.toLowerCase().includes('george') ||
+        v.name.toLowerCase().includes('arthur')
+      );
+      if (!voice) {
+        voice = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Google US English Male'));
+      }
+    } else {
+      voice = voices.find(v => 
+        v.name.toLowerCase().includes('female') || 
+        v.name.toLowerCase().includes('girl') || 
+        v.name.toLowerCase().includes('zira') || 
+        v.name.toLowerCase().includes('samantha') ||
+        v.name.toLowerCase().includes('victoria') ||
+        v.name.toLowerCase().includes('karen')
+      );
+      if (!voice) {
+        voice = voices.find(v => v.name.includes('Google UK English Female') || v.name.includes('Google US English Female'));
+      }
+    }
+    
+    if (voice) {
+      utterance.voice = voice;
+    }
+  };
 
   const speak = (text: string | string[]) => {
     window.speechSynthesis.cancel();
@@ -44,6 +83,7 @@ export default function Dashboard() {
         }
         
         const utterance = new SpeechSynthesisUtterance(text[currentIndex]);
+        applyVoice(utterance);
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => {
           currentIndex++;
@@ -61,12 +101,21 @@ export default function Dashboard() {
       playNext();
     } else {
       const utterance = new SpeechSynthesisUtterance(text);
+      applyVoice(utterance);
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
       window.speechSynthesis.speak(utterance);
     }
   };
+
+  useEffect(() => {
+    // Trigger voice loading
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
+  }, []);
 
   useEffect(() => {
     if (!profile || loading || greetingShown) return;
@@ -135,6 +184,13 @@ export default function Dashboard() {
               onClick={() => setShowIntegrations(true)}
               className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
               title="Integrations"
+            >
+              <Link className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+              title="Settings"
             >
               <Settings className="h-5 w-5" />
             </button>
@@ -209,6 +265,10 @@ export default function Dashboard() {
 
       {showIntegrations && (
         <IntegrationsModal onClose={() => setShowIntegrations(false)} />
+      )}
+
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
       )}
 
       {showDictateModal && (
@@ -784,6 +844,71 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
           ) : (
             <p className="text-slate-400">Tap the microphone to speak</p>
           )}
+        </div>
+
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SettingsModal({ onClose }: { onClose: () => void }) {
+  const { profile, updateProfile } = useAuth();
+  const [voicePreference, setVoicePreference] = useState<'male' | 'female'>(profile?.voicePreference || 'female');
+
+  const handleSave = async () => {
+    await updateProfile({ voicePreference });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 relative">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">Settings</h2>
+        
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Avatar Voice</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="voice" 
+                  value="female" 
+                  checked={voicePreference === 'female'}
+                  onChange={() => setVoicePreference('female')}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300"
+                />
+                <span className="text-slate-700">Woman</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="voice" 
+                  value="male" 
+                  checked={voicePreference === 'male'}
+                  onChange={() => setVoicePreference('male')}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300"
+                />
+                <span className="text-slate-700">Man</span>
+              </label>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Note: Voice availability depends on your browser and operating system.
+            </p>
+          </div>
+          
+          <button 
+            onClick={handleSave}
+            className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+          >
+            Save Settings
+          </button>
         </div>
 
         <button 
