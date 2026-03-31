@@ -15,7 +15,7 @@ interface CalendarContextType {
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
 export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,10 +26,28 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
+    const generateMockConnectedEvents = () => {
+      if (!profile?.connectedCalendars || profile.connectedCalendars.length === 0) return [];
+      const now = new Date();
+      const mockConnectedEvents: CalendarEvent[] = [];
+      
+      profile.connectedCalendars.forEach((provider, index) => {
+        mockConnectedEvents.push({
+          id: `connected-${provider}-${index}`,
+          ownerId: user.uid,
+          title: `Sync: ${provider} Meeting`,
+          description: `Imported from ${provider}`,
+          startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + index, 9 + index, 0),
+          endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + index, 10 + index, 0),
+        });
+      });
+      return mockConnectedEvents;
+    };
+
     if (user.isAnonymous) {
       // Load test data for guest user
       const now = new Date();
-      setEvents([
+      const baseEvents = [
         {
           id: 'test-1',
           ownerId: user.uid,
@@ -67,7 +85,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           startTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10, 15, 0),
           endTime: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10, 16, 0),
         }
-      ]);
+      ];
+      setEvents([...baseEvents, ...generateMockConnectedEvents()]);
       setLoading(false);
       return;
     }
@@ -95,8 +114,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       
       setEvents(prev => {
-        const others = prev.filter(e => e.ownerId !== user.uid);
-        const merged = [...newEvents, ...others];
+        const others = prev.filter(e => e.ownerId !== user.uid && !e.id.startsWith('connected-'));
+        const merged = [...newEvents, ...others, ...generateMockConnectedEvents()];
         // Remove duplicates just in case
         return Array.from(new Map(merged.map(item => [item.id, item])).values());
       });
@@ -118,7 +137,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       
       setEvents(prev => {
-        const others = prev.filter(e => e.ownerId === user.uid);
+        const others = prev.filter(e => e.ownerId === user.uid || e.id.startsWith('connected-'));
         const merged = [...others, ...newEvents];
         // Remove duplicates just in case
         return Array.from(new Map(merged.map(item => [item.id, item])).values());
@@ -131,7 +150,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       unsubscribe1();
       unsubscribe2();
     };
-  }, [user]);
+  }, [user, profile?.connectedCalendars]);
 
   const addEvent = async (event: Omit<CalendarEvent, 'id' | 'ownerId'>) => {
     if (!user) return;

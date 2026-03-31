@@ -7,6 +7,13 @@ export interface UserProfile {
   lastGreetingDate?: string;
   webAuthnCredentialId?: string;
   webAuthnPublicKey?: string;
+  connectedCalendars?: string[];
+  integrationConfigs?: {
+    [provider: string]: {
+      clientId?: string;
+      appPassword?: string;
+    };
+  };
 }
 
 export interface CalendarEvent {

@@ -176,19 +176,154 @@ export default function Dashboard() {
 }
 
 function IntegrationsModal({ onClose }: { onClose: () => void }) {
+  const { profile, updateProfile } = useAuth();
+  const [connecting, setConnecting] = useState<string | null>(null);
+  const [configuring, setConfiguring] = useState<string | null>(null);
+  const [clientIdInput, setClientIdInput] = useState('');
+
+  const handleConnect = async (provider: string, clientId?: string) => {
+    setConnecting(provider);
+    try {
+      let url = '';
+      if (provider === 'Google Calendar') {
+        const res = await fetch(`/api/auth/google/url?clientId=${encodeURIComponent(clientId || '')}`);
+        const data = await res.json();
+        url = data.url;
+      } else if (provider === 'Microsoft 365' || provider === 'Microsoft Exchange') {
+        const res = await fetch(`/api/auth/microsoft/url?clientId=${encodeURIComponent(clientId || '')}`);
+        const data = await res.json();
+        url = data.url;
+      } else if (provider === 'Apple Calendar') {
+        const res = await fetch('/api/auth/apple/url');
+        const data = await res.json();
+        url = data.url;
+      }
+
+      if (url === '/apple-auth-instructions') {
+        alert('To connect Apple Calendar, please generate an App-Specific Password at appleid.apple.com and enter it in the settings.');
+        setConnecting(null);
+        return;
+      }
+
+      const authWindow = window.open(url, 'oauth_popup', 'width=600,height=700');
+      if (!authWindow) {
+        alert('Please allow popups for this site to connect your account.');
+        setConnecting(null);
+      }
+    } catch (error) {
+      console.error('OAuth error:', error);
+      alert('Failed to initiate connection.');
+      setConnecting(null);
+    }
+  };
+
+  const handleSaveConfigAndConnect = async (provider: string) => {
+    if (!clientIdInput.trim() && provider !== 'Apple Calendar') {
+      alert('Client ID is required');
+      return;
+    }
+    
+    const newConfigs = {
+      ...(profile?.integrationConfigs || {}),
+      [provider]: { clientId: clientIdInput.trim() }
+    };
+    
+    await updateProfile({ integrationConfigs: newConfigs });
+    setConfiguring(null);
+    handleConnect(provider, clientIdInput.trim());
+  };
+
+  const initiateConnection = (provider: string) => {
+    const existingConfig = profile?.integrationConfigs?.[provider];
+    if (provider !== 'Apple Calendar' && (!existingConfig || !existingConfig.clientId)) {
+      setConfiguring(provider);
+      setClientIdInput('');
+    } else {
+      handleConnect(provider, existingConfig?.clientId);
+    }
+  };
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const origin = event.origin;
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+        return;
+      }
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        const provider = event.data.provider;
+        const currentConnections = profile?.connectedCalendars || [];
+        
+        let providerName = provider;
+        if (provider === 'Google') providerName = 'Google Calendar';
+        if (provider === 'Microsoft') providerName = connecting === 'Microsoft Exchange' ? 'Microsoft Exchange' : 'Microsoft 365';
+
+        if (!currentConnections.includes(providerName)) {
+          updateProfile({ connectedCalendars: [...currentConnections, providerName] });
+        }
+        setConnecting(null);
+        alert(`Successfully connected to ${providerName}!`);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [profile, updateProfile, connecting]);
+
+  const providers = ['Google Calendar', 'Apple Calendar', 'Microsoft 365', 'Microsoft Exchange'];
+  const connected = profile?.connectedCalendars || [];
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">Calendar Integrations</h2>
         <div className="space-y-4">
-          {['Google Calendar', 'Apple Calendar', 'Microsoft 365', 'Microsoft Exchange'].map(provider => (
-            <div key={provider} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-              <span className="font-medium text-slate-700">{provider}</span>
-              <button className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200">
-                Connect
-              </button>
-            </div>
-          ))}
+          {providers.map(provider => {
+            const isConnected = connected.includes(provider);
+            const isConfiguring = configuring === provider;
+            
+            return (
+              <div key={provider} className="flex flex-col p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-700">{provider}</span>
+                  {isConnected ? (
+                    <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+                      Connected
+                    </span>
+                  ) : isConfiguring ? (
+                    <button onClick={() => setConfiguring(null)} className="text-sm text-slate-500 hover:text-slate-700">Cancel</button>
+                  ) : (
+                    <button 
+                      onClick={() => initiateConnection(provider)}
+                      disabled={connecting === provider}
+                      className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 disabled:opacity-50"
+                    >
+                      {connecting === provider ? 'Connecting...' : 'Configure & Connect'}
+                    </button>
+                  )}
+                </div>
+                
+                {isConfiguring && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      {provider === 'Apple Calendar' ? 'App-Specific Password' : 'OAuth Client ID'}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={clientIdInput}
+                      onChange={e => setClientIdInput(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none mb-3 text-sm"
+                      placeholder={`Enter your ${provider} Client ID`}
+                    />
+                    <button 
+                      onClick={() => handleSaveConfigAndConnect(provider)}
+                      className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                    >
+                      Save & Connect
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         <button 
           onClick={onClose}
