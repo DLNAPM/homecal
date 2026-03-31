@@ -110,6 +110,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ...data,
           startTime: (data.startTime as Timestamp).toDate(),
           endTime: (data.endTime as Timestamp).toDate(),
+          snoozedUntil: data.snoozedUntil ? (data.snoozedUntil as Timestamp).toDate() : undefined,
         } as CalendarEvent;
       });
       
@@ -133,6 +134,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ...data,
           startTime: (data.startTime as Timestamp).toDate(),
           endTime: (data.endTime as Timestamp).toDate(),
+          snoozedUntil: data.snoozedUntil ? (data.snoozedUntil as Timestamp).toDate() : undefined,
         } as CalendarEvent;
       });
       
@@ -166,12 +168,16 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     try {
-      await addDoc(collection(db, 'events'), {
+      const eventData: any = {
         ...event,
         ownerId: user.uid,
         startTime: Timestamp.fromDate(event.startTime),
         endTime: Timestamp.fromDate(event.endTime),
-      });
+      };
+      if (event.snoozedUntil) {
+        eventData.snoozedUntil = Timestamp.fromDate(event.snoozedUntil);
+      }
+      await addDoc(collection(db, 'events'), eventData);
     } catch (error) {
       console.error('Error adding event:', error);
       throw error;
@@ -179,7 +185,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const updateEvent = async (id: string, event: Partial<CalendarEvent>) => {
-    if (!user) return;
+    if (!user || id.startsWith('connected-')) return;
 
     if (user.isAnonymous) {
       setEvents(prev => prev.map(e => e.id === id ? { ...e, ...event } : e));
@@ -191,6 +197,14 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const updateData: any = { ...event };
       if (event.startTime) updateData.startTime = Timestamp.fromDate(event.startTime);
       if (event.endTime) updateData.endTime = Timestamp.fromDate(event.endTime);
+      if (event.snoozedUntil) {
+        updateData.snoozedUntil = Timestamp.fromDate(event.snoozedUntil);
+      } else if (event.snoozedUntil === null) {
+        updateData.snoozedUntil = null;
+      }
+      if (event.reminderMinutes === null) {
+        updateData.reminderMinutes = null;
+      }
       await updateDoc(docRef, updateData);
     } catch (error) {
       console.error('Error updating event:', error);
@@ -199,7 +213,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const deleteEvent = async (id: string) => {
-    if (!user) return;
+    if (!user || id.startsWith('connected-')) return;
 
     if (user.isAnonymous) {
       setEvents(prev => prev.filter(e => e.id !== id));

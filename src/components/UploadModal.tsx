@@ -21,6 +21,7 @@ export default function UploadModal({ onClose }: { onClose: () => void }) {
   const optionalFields = [
     { name: 'description', type: 'string', description: 'Additional details about the appointment' },
     { name: 'sharedWith', type: 'string', description: 'Comma-separated email addresses' },
+    { name: 'reminderMinutes', type: 'number', description: 'Minutes before start time to trigger reminder (e.g., 5, 15, 30, 60)' },
   ];
 
   const downloadExample = (format: 'json' | 'csv' | 'xlsx') => {
@@ -30,14 +31,16 @@ export default function UploadModal({ onClose }: { onClose: () => void }) {
         startTime: '2026-04-01T10:00:00',
         endTime: '2026-04-01T11:00:00',
         description: 'Weekly team synchronization meeting',
-        sharedWith: 'team@example.com, manager@example.com'
+        sharedWith: 'team@example.com, manager@example.com',
+        reminderMinutes: 15
       },
       {
         title: 'Doctor Appointment',
         startTime: '2026-04-02T14:30:00',
         endTime: '2026-04-02T15:30:00',
         description: 'Annual checkup',
-        sharedWith: ''
+        sharedWith: '',
+        reminderMinutes: 60
       }
     ];
 
@@ -99,6 +102,13 @@ export default function UploadModal({ onClose }: { onClose: () => void }) {
 
         if (row.sharedWith) {
           eventData.sharedWith = String(row.sharedWith).split(',').map(e => e.trim()).filter(e => e);
+        }
+
+        if (row.reminderMinutes !== undefined && row.reminderMinutes !== '') {
+          const parsedMinutes = Number(row.reminderMinutes);
+          if (!isNaN(parsedMinutes)) {
+            eventData.reminderMinutes = parsedMinutes;
+          }
         }
 
         await addEvent(eventData);

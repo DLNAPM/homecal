@@ -24,4 +24,7 @@ export interface CalendarEvent {
   startTime: Date;
   endTime: Date;
   sharedWith?: string[];
+  reminderMinutes?: number | null;
+  acknowledged?: boolean;
+  snoozedUntil?: Date | null;
 }

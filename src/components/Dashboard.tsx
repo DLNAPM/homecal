@@ -9,6 +9,7 @@ import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import AnimatedAvatar from './AnimatedAvatar';
 import UploadModal from './UploadModal';
+import ReminderSystem from './ReminderSystem';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [showIntegrations, setShowIntegrations] = useState(false);
   const [showDictateModal, setShowDictateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -188,7 +190,7 @@ export default function Dashboard() {
             date={date}
             onNavigate={setDate}
             views={['month', 'week', 'day', 'agenda']}
-            onSelectEvent={(event) => alert(`Event: ${event.title}\nShared with: ${event.resource.sharedWith?.join(', ') || 'None'}`)}
+            onSelectEvent={(event) => setSelectedEvent(event.resource)}
           />
         </div>
       </main>
@@ -199,6 +201,10 @@ export default function Dashboard() {
       
       {showEventModal && (
         <EventModal onClose={() => setShowEventModal(false)} />
+      )}
+
+      {selectedEvent && (
+        <EditEventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
       )}
 
       {showIntegrations && (
@@ -212,6 +218,8 @@ export default function Dashboard() {
       {showUploadModal && (
         <UploadModal onClose={() => setShowUploadModal(false)} />
       )}
+
+      <ReminderSystem />
 
       <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
         <AnimatedAvatar isSpeaking={isSpeaking} />
@@ -387,6 +395,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('12:00');
   const [sharedWith, setSharedWith] = useState('');
+  const [reminderMinutes, setReminderMinutes] = useState<number | ''>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -398,11 +407,9 @@ function EventModal({ onClose }: { onClose: () => void }) {
       startTime: start,
       endTime: end,
       sharedWith: sharedWith ? sharedWith.split(',').map(s => s.trim()) : [],
+      reminderMinutes: reminderMinutes === '' ? undefined : Number(reminderMinutes),
     });
     
-    if (sharedWith) {
-      alert(`Notification sent to ${sharedWith} about the new event: ${title}`);
-    }
     onClose();
   };
 
@@ -445,6 +452,20 @@ function EventModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Reminder</label>
+            <select
+              value={reminderMinutes}
+              onChange={e => setReminderMinutes(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+            >
+              <option value="">No reminder</option>
+              <option value="5">5 minutes before</option>
+              <option value="15">15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Share with (emails, comma separated)</label>
             <input 
               type="text" 
@@ -460,6 +481,168 @@ function EventModal({ onClose }: { onClose: () => void }) {
           >
             Save Event
           </button>
+        </form>
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EditEventModal({ event, onClose }: { event: any, onClose: () => void }) {
+  const { updateEvent, deleteEvent } = useCalendar();
+  const [title, setTitle] = useState(event.title);
+  const [date, setDate] = useState(format(event.startTime, 'yyyy-MM-dd'));
+  const [time, setTime] = useState(format(event.startTime, 'HH:mm'));
+  const [sharedWith, setSharedWith] = useState(event.sharedWith?.join(', ') || '');
+  const [reminderMinutes, setReminderMinutes] = useState<number | ''>(event.reminderMinutes || '');
+
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
+  const isConnectedEvent = event.id.startsWith('connected-');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isConnectedEvent) return;
+    const start = new Date(`${date}T${time}`);
+    const end = new Date(start.getTime() + (event.endTime.getTime() - event.startTime.getTime()));
+    
+    await updateEvent(event.id, {
+      title,
+      startTime: start,
+      endTime: end,
+      sharedWith: sharedWith ? sharedWith.split(',').map(s => s.trim()) : [],
+      reminderMinutes: reminderMinutes === '' ? null : Number(reminderMinutes),
+      acknowledged: false, // Reset acknowledgment on edit
+      snoozedUntil: null, // Reset snooze on edit
+    });
+    
+    onClose();
+  };
+
+  const handleDelete = async () => {
+    if (isConnectedEvent) return;
+    await deleteEvent(event.id);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">
+          {isConnectedEvent ? 'View Event' : 'Edit Event'}
+        </h2>
+        {isConnectedEvent && (
+          <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
+            This event is synced from an external calendar and cannot be edited here.
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+            <input 
+              type="text" 
+              required
+              disabled={isConnectedEvent}
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+              <input 
+                type="date" 
+                required
+                disabled={isConnectedEvent}
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+              <input 
+                type="time" 
+                required
+                disabled={isConnectedEvent}
+                value={time}
+                onChange={e => setTime(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Reminder</label>
+            <select
+              value={reminderMinutes}
+              disabled={isConnectedEvent}
+              onChange={e => setReminderMinutes(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white disabled:opacity-50 disabled:bg-slate-50"
+            >
+              <option value="">No reminder</option>
+              <option value="5">5 minutes before</option>
+              <option value="15">15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Share with (emails, comma separated)</label>
+            <input 
+              type="text" 
+              disabled={isConnectedEvent}
+              value={sharedWith}
+              onChange={e => setSharedWith(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
+            />
+          </div>
+          {!isConnectedEvent && (
+            <div className="flex flex-col gap-3 mt-6">
+              {showConfirmDelete ? (
+                <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                  <p className="text-sm text-red-800 mb-3 font-medium">Are you sure you want to delete this event?</p>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={handleDelete}
+                      className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                    >
+                      Yes, Delete
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setShowConfirmDelete(false)}
+                      className="flex-1 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowConfirmDelete(true)}
+                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl font-medium hover:bg-red-100 transition-colors"
+                  >
+                    Delete
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </form>
         <button 
           onClick={onClose}
