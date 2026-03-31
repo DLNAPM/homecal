@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
@@ -9,6 +9,7 @@ import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import AnimatedAvatar from './AnimatedAvatar';
 import UploadModal from './UploadModal';
+import SmartAddModal from './SmartAddModal';
 import ReminderSystem from './ReminderSystem';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [showDictateModal, setShowDictateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showSmartAddModal, setShowSmartAddModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
@@ -211,6 +213,13 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Your Calendar</h1>
           <div className="flex items-center gap-3">
             <button 
+              onClick={() => setShowSmartAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+            >
+              <Sparkles className="h-4 w-4 text-blue-600" />
+              Smart Add
+            </button>
+            <button 
               onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
             >
@@ -277,6 +286,10 @@ export default function Dashboard() {
 
       {showUploadModal && (
         <UploadModal onClose={() => setShowUploadModal(false)} />
+      )}
+
+      {showSmartAddModal && (
+        <SmartAddModal onClose={() => setShowSmartAddModal(false)} />
       )}
 
       <ReminderSystem />
