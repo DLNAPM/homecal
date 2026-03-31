@@ -9,8 +9,12 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     try {
       await signInWithGoogle();
-    } catch (err) {
-      setError('Failed to sign in with Google');
+    } catch (err: any) {
+      if (err?.code === 'auth/unauthorized-domain' || err?.message?.includes('auth/unauthorized-domain')) {
+        setError(`Domain not authorized. Please add exactly this domain to Firebase Auth Authorized Domains: ${window.location.hostname}`);
+      } else {
+        setError(err.message || 'Failed to sign in with Google');
+      }
     }
   };
 
@@ -47,7 +51,7 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center">
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center break-words">
             {error}
           </div>
         )}
