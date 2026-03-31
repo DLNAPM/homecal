@@ -1,10 +1,10 @@
 {
-  "projectId": "gen-lang-client-0034495083",
-  "appId": "1:761653955507:web:b5677799034bb3d7a959c6",
-  "apiKey": "AIzaSyBrC7htvVlur64B-YPvtOsCgZbJ1arZ3OM",
-  "authDomain": "gen-lang-client-0034495083.firebaseapp.com",
+  "projectId": "homecal-4deda",
+  "appId": "1:516607370581:web:4ac2fba09802735e27fbdc",
+  "apiKey": "AIzaSyAxxdCYpnxJEoG7Av64TrlNbHWq-MDvGws",
+  "authDomain": "homecal-4deda.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-f402f91f-c5c3-4177-9b8b-c4aef623809d",
-  "storageBucket": "gen-lang-client-0034495083.firebasestorage.app",
-  "messagingSenderId": "761653955507",
+  "storageBucket": "homecal-4deda.firebasestorage.app",
+  "messagingSenderId": "516607370581",
   "measurementId": ""
 }
