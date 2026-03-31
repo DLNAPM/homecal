@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { LogIn, ScanFace, Calendar, UserCircle, HelpCircle } from 'lucide-react';
+import { LogIn, ScanFace, Calendar, UserCircle, HelpCircle, Mic, Sparkles, Link as LinkIcon } from 'lucide-react';
 import HelpModal from './HelpModal';
 
 export default function Login() {
@@ -35,90 +35,149 @@ export default function Login() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 relative">
-      <button
-        onClick={() => setShowHelpModal(true)}
-        className="absolute top-6 right-6 p-3 bg-white text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full shadow-sm transition-colors border border-slate-200"
-        title="Help & Information"
-      >
-        <HelpCircle className="w-6 h-6" />
-      </button>
-
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <Calendar className="h-8 w-8 text-blue-600" />
-          </div>
-          <h2 className="text-3xl font-bold text-slate-900">HomeCal</h2>
-          <p className="text-slate-500 mt-2">Your smart electronic calendar</p>
+    <div className="min-h-screen bg-white font-sans text-slate-900">
+      {/* Header */}
+      <header className="absolute top-0 w-full p-6 flex justify-between items-center z-10">
+        <div className="flex items-center gap-2 text-blue-600">
+          <Calendar className="h-8 w-8" />
+          <span className="text-2xl font-bold text-slate-900 tracking-tight">HomeCal</span>
         </div>
+        <button
+          onClick={() => setShowHelpModal(true)}
+          className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+          title="Help & Information"
+        >
+          <HelpCircle className="w-6 h-6" />
+        </button>
+      </header>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center break-words">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <button
-            onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium"
-          >
-            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-            Continue with Google
-          </button>
-
-          <button
-            onClick={handleGuestLogin}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium"
-          >
-            <UserCircle className="w-5 h-5 text-slate-500" />
-            Test Drive as Guest
-          </button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-slate-500">Premium Feature</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleFaceLogin}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium"
-          >
-            <ScanFace className="w-5 h-5" />
-            Face Login
-          </button>
-        </div>
-
-        <div className="pt-8 mt-8 border-t border-slate-100">
-          <div className="text-center mb-4">
-            <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">What is HomeCal?</h3>
-            <p className="text-xs text-slate-500 mt-1">Watch this quick 30-second guide on how to use the app.</p>
-          </div>
-          <div className="relative rounded-xl overflow-hidden bg-slate-900 aspect-video shadow-md border border-slate-200">
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12">
+        <div className="flex-1 text-center lg:text-left">
+          <h1 className="text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
+            Your smart <span className="text-blue-600">electronic calendar</span>
+          </h1>
+          <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto lg:mx-0">
+            Manage your appointments, dictate your agenda, and seamlessly organize your life using natural language and voice commands.
+          </p>
+          
+          <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-video shadow-2xl border border-slate-200 max-w-2xl mx-auto lg:mx-0">
             <video
               controls
               className="w-full h-full object-cover"
-              poster="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=640&h=360"
+              poster="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=1200&h=675"
             >
-              {/* Placeholder video. Replace with actual 30s screencast of the app */}
               <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>
         </div>
-      </div>
+
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-slate-900">Get Started</h2>
+            <p className="text-slate-500 mt-2">Sign in to access your calendar</p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm text-center break-words">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
+            >
+              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+              Continue with Google
+            </button>
+
+            <button
+              onClick={handleGuestLogin}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
+            >
+              <UserCircle className="w-5 h-5 text-slate-500" />
+              Test Drive as Guest
+            </button>
+
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-white text-slate-400 font-medium tracking-wide text-xs uppercase">Premium Feature</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleFaceLogin}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-sm"
+            >
+              <ScanFace className="w-5 h-5" />
+              Face Login
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-24 bg-slate-50 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-slate-900">Everything you need to stay organized</h2>
+            <p className="mt-4 text-lg text-slate-600">Powerful features designed to save you time and keep your life on track.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12">
+            {/* Feature 1 */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+                <Mic className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Voice-Activated Agenda</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Interact with your calendar hands-free. Ask about your upcoming appointments, dictate new events, and get a daily briefing of your schedule.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+              <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-6">
+                <Sparkles className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Smart Event Extraction</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Upload documents, images, or paste text. Our AI automatically extracts dates, times, and details to instantly populate your calendar.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
+                <LinkIcon className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Seamless Integrations</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Connect your existing Google, Apple, or Microsoft calendars. Keep all your schedules synchronized in one beautiful, intelligent dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-white py-12 border-t border-slate-100 text-center">
+        <p className="text-slate-500">© {new Date().getFullYear()} HomeCal. All rights reserved.</p>
+      </footer>
 
       {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
     </div>
