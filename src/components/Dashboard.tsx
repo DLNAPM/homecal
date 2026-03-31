@@ -7,6 +7,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import AnimatedAvatar from './AnimatedAvatar';
 
 const localizer = momentLocalizer(moment);
 
@@ -20,6 +21,16 @@ export default function Dashboard() {
   const [showDictateModal, setShowDictateModal] = useState(false);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const speak = (text: string) => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     if (!profile || loading || greetingShown) return;
@@ -29,8 +40,7 @@ export default function Dashboard() {
       const todayEvents = events.filter(e => isToday(e.startTime));
       const message = `Hello ${profile.displayName || 'User'}, How are you today? You have ${todayEvents.length} appointments today. Do you want to update your Calendar Appointment?`;
       
-      const utterance = new SpeechSynthesisUtterance(message);
-      window.speechSynthesis.speak(utterance);
+      speak(message);
       
       alert(message);
       
@@ -43,8 +53,7 @@ export default function Dashboard() {
             weekEvents.forEach(e => {
               dictation += `${e.title} on ${format(e.startTime, 'EEEE')} at ${format(e.startTime, 'h:mm a')}. `;
             });
-            const dictationUtterance = new SpeechSynthesisUtterance(dictation);
-            window.speechSynthesis.speak(dictationUtterance);
+            speak(dictation);
           }
         }
       }, 5000);
@@ -144,7 +153,7 @@ export default function Dashboard() {
       </main>
 
       {showVoiceAssistant && (
-        <VoiceAssistantModal onClose={() => setShowVoiceAssistant(false)} />
+        <VoiceAssistantModal onClose={() => setShowVoiceAssistant(false)} speak={speak} />
       )}
       
       {showEventModal && (
@@ -156,8 +165,12 @@ export default function Dashboard() {
       )}
 
       {showDictateModal && (
-        <DictateModal onClose={() => setShowDictateModal(false)} events={events} />
+        <DictateModal onClose={() => setShowDictateModal(false)} events={events} speak={speak} />
       )}
+
+      <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
+        <AnimatedAvatar isSpeaking={isSpeaking} />
+      </div>
     </div>
   );
 }
@@ -279,7 +292,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function VoiceAssistantModal({ onClose }: { onClose: () => void }) {
+function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (text: string) => void }) {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -358,8 +371,7 @@ function VoiceAssistantModal({ onClose }: { onClose: () => void }) {
 
       await addEvent(event);
       
-      const utterance = new SpeechSynthesisUtterance(`I've added ${event.title} to your calendar.`);
-      window.speechSynthesis.speak(utterance);
+      speak(`I've added ${event.title} to your calendar.`);
       
       setTimeout(() => {
         onClose();
@@ -422,7 +434,7 @@ function VoiceAssistantModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function DictateModal({ onClose, events }: { onClose: () => void, events: any[] }) {
+function DictateModal({ onClose, events, speak }: { onClose: () => void, events: any[], speak: (text: string) => void }) {
   const handleDictate = (range: 'day' | 'week' | 'month') => {
     const now = new Date();
     let filteredEvents = [];
@@ -443,16 +455,14 @@ function DictateModal({ onClose, events }: { onClose: () => void, events: any[] 
     filteredEvents.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
     if (filteredEvents.length === 0) {
-      const utterance = new SpeechSynthesisUtterance(`You have no appointments for ${rangeText}.`);
-      window.speechSynthesis.speak(utterance);
+      speak(`You have no appointments for ${rangeText}.`);
     } else {
       let dictation = `For ${rangeText}, you have ${filteredEvents.length} appointment${filteredEvents.length > 1 ? 's' : ''}: `;
       filteredEvents.forEach(e => {
         const dayStr = isToday(e.startTime) ? 'today' : format(e.startTime, 'EEEE, MMMM do');
         dictation += `${e.title} ${dayStr} at ${format(e.startTime, 'h:mm a')}. `;
       });
-      const utterance = new SpeechSynthesisUtterance(dictation);
-      window.speechSynthesis.speak(utterance);
+      speak(dictation);
     }
     onClose();
   };
