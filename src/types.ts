@@ -17,6 +17,14 @@ export interface UserProfile {
   };
 }
 
+export interface Group {
+  id: string;
+  ownerId: string;
+  name: string;
+  members: string[]; // array of emails
+  shareAllEvents?: boolean;
+}
+
 export interface CalendarEvent {
   id: string;
   ownerId: string;

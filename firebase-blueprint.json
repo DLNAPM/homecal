@@ -64,7 +64,7 @@
         },
         "endTime": {
           "type": "timestamp",
-          "description": "The end time of the event."
+          "description": "The end time of the event (optional)."
         },
         "sharedWith": {
           "type": "array",
@@ -75,7 +75,35 @@
           "description": "A list of email addresses this event is shared with."
         }
       },
-      "required": ["ownerId", "title", "startTime", "endTime"]
+      "required": ["ownerId", "title", "startTime"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "A group of users to share events with.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who created the group."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the group."
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "description": "A list of email addresses in the group."
+        },
+        "shareAllEvents": {
+          "type": "boolean",
+          "description": "Whether to share all events with this group automatically."
+        }
+      },
+      "required": ["ownerId", "name", "members"]
     }
   },
   "firestore": {
@@ -90,6 +118,12 @@
         "$ref": "#/entities/Event"
       },
       "description": "Stores calendar events."
+    },
+    "/groups/{groupId}": {
+      "schema": {
+        "$ref": "#/entities/Group"
+      },
+      "description": "Stores user groups for sharing."
     }
   }
 }

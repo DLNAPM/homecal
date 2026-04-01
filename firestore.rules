@@ -80,13 +80,25 @@ service cloud.firestore {
     }
 
     function isValidEvent(data) {
-      return hasRequiredFields(['ownerId', 'title', 'startTime', 'endTime']) &&
+      return hasRequiredFields(['ownerId', 'title', 'startTime']) &&
              data.ownerId is string && data.ownerId.size() > 0 && data.ownerId.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              (!('description' in data) || (data.description is string && data.description.size() < 2000)) &&
              data.startTime is timestamp &&
-             data.endTime is timestamp &&
-             (!('sharedWith' in data) || isValidList(data.sharedWith, 50));
+             (!('endTime' in data) || data.endTime == null || data.endTime is timestamp) &&
+             (!('sharedWith' in data) || isValidList(data.sharedWith, 50)) &&
+             (!('reminderMinutes' in data) || data.reminderMinutes == null || data.reminderMinutes is number) &&
+             (!('reminderChime' in data) || data.reminderChime is bool) &&
+             (!('acknowledged' in data) || data.acknowledged is bool) &&
+             (!('snoozedUntil' in data) || data.snoozedUntil == null || data.snoozedUntil is timestamp);
+    }
+
+    function isValidGroup(data) {
+      return hasRequiredFields(['ownerId', 'name', 'members']) &&
+             data.ownerId is string && data.ownerId.size() > 0 && data.ownerId.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidList(data.members, 100) &&
+             (!('shareAllEvents' in data) || data.shareAllEvents is bool);
     }
 
     // ===============================================================
@@ -104,6 +116,13 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.ownerId && isValidEvent(request.resource.data);
       allow update: if isDocOwner() && isValidEvent(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
       allow delete: if isDocOwner();
+    }
+
+    match /groups/{groupId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.ownerId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.ownerId && isValidGroup(request.resource.data);
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.ownerId && isValidGroup(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.ownerId;
     }
   }
 }

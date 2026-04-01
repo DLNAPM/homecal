@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle, Users } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
@@ -12,6 +12,7 @@ import UploadModal from './UploadModal';
 import SmartAddModal from './SmartAddModal';
 import ReminderSystem from './ReminderSystem';
 import HelpModal from './HelpModal';
+import GroupsModal from './GroupsModal';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showIntegrations, setShowIntegrations] = useState(false);
+  const [showGroups, setShowGroups] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDictateModal, setShowDictateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -222,6 +224,13 @@ export default function Dashboard() {
               <Link className="h-5 w-5" />
             </button>
             <button
+              onClick={() => setShowGroups(true)}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+              title="Manage Groups"
+            >
+              <Users className="h-5 w-5" />
+            </button>
+            <button
               onClick={() => setShowSettings(true)}
               className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
               title="Settings"
@@ -369,6 +378,7 @@ export default function Dashboard() {
       )}
 
       {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
+      {showGroups && <GroupsModal onClose={() => setShowGroups(false)} />}
 
       <ReminderSystem />
 
@@ -718,7 +728,7 @@ function IntegrationsModal({ onClose }: { onClose: () => void }) {
 }
 
 function EventModal({ onClose }: { onClose: () => void }) {
-  const { addEvent } = useCalendar();
+  const { addEvent, groups } = useCalendar();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('12:00');
@@ -855,6 +865,26 @@ function EventModal({ onClose }: { onClose: () => void }) {
               className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               placeholder="jane@example.com"
             />
+            {groups.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {groups.map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      const currentEmails = sharedWith ? sharedWith.split(',').map(s => s.trim()).filter(s => s) : [];
+                      const newEmails = g.members.filter(m => !currentEmails.includes(m));
+                      if (newEmails.length > 0) {
+                        setSharedWith([...currentEmails, ...newEmails].join(', '));
+                      }
+                    }}
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition-colors border border-slate-200"
+                  >
+                    + {g.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <button 
             type="submit"
@@ -875,7 +905,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
 }
 
 function EditEventModal({ event, onClose }: { event: any, onClose: () => void }) {
-  const { updateEvent, deleteEvent } = useCalendar();
+  const { updateEvent, deleteEvent, groups } = useCalendar();
   const [title, setTitle] = useState(event.title);
   const [date, setDate] = useState(format(event.startTime, 'yyyy-MM-dd'));
   const [time, setTime] = useState(format(event.startTime, 'HH:mm'));
@@ -1039,6 +1069,26 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
               onChange={e => setSharedWith(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
             />
+            {!isConnectedEvent && groups.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {groups.map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      const currentEmails = sharedWith ? sharedWith.split(',').map(s => s.trim()).filter(s => s) : [];
+                      const newEmails = g.members.filter(m => !currentEmails.includes(m));
+                      if (newEmails.length > 0) {
+                        setSharedWith([...currentEmails, ...newEmails].join(', '));
+                      }
+                    }}
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition-colors border border-slate-200"
+                  >
+                    + {g.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {!isConnectedEvent && (
             <div className="flex flex-col gap-3 mt-6">

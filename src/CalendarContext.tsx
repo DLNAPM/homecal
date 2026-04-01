@@ -2,14 +2,18 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAuth } from './AuthContext';
-import { CalendarEvent } from './types';
+import { Group, CalendarEvent } from './types';
 
 interface CalendarContextType {
   events: CalendarEvent[];
+  groups: Group[];
   loading: boolean;
   addEvent: (event: Omit<CalendarEvent, 'id' | 'ownerId'>) => Promise<void>;
   updateEvent: (id: string, event: Partial<CalendarEvent>) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
+  addGroup: (group: Omit<Group, 'id' | 'ownerId'>) => Promise<void>;
+  updateGroup: (id: string, group: Partial<Group>) => Promise<void>;
+  deleteGroup: (id: string) => Promise<void>;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -17,11 +21,13 @@ const CalendarContext = createContext<CalendarContextType | undefined>(undefined
 export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
       setEvents([]);
+      setGroups([]);
       setLoading(false);
       return;
     }
@@ -87,6 +93,10 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       ];
       setEvents([...baseEvents, ...generateMockConnectedEvents()]);
+      setGroups([
+        { id: 'group-1', ownerId: user.uid, name: 'Family', members: ['spouse@example.com', 'kid@example.com'] },
+        { id: 'group-2', ownerId: user.uid, name: 'Work Team', members: ['boss@example.com', 'colleague@example.com'] }
+      ]);
       setLoading(false);
       return;
     }
@@ -148,18 +158,44 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.error('Error fetching shared events:', error);
     });
 
+    const q3 = query(
+      collection(db, 'groups'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const unsubscribe3 = onSnapshot(q3, (snapshot) => {
+      const newGroups = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Group[];
+      setGroups(newGroups);
+    }, (error) => {
+      console.error('Error fetching groups:', error);
+    });
+
     return () => {
       unsubscribe1();
       unsubscribe2();
+      unsubscribe3();
     };
   }, [user, profile?.connectedCalendars]);
 
   const addEvent = async (event: Omit<CalendarEvent, 'id' | 'ownerId'>) => {
     if (!user) return;
     
+    // Auto-share with groups that have shareAllEvents enabled
+    const autoShareEmails = new Set<string>(event.sharedWith || []);
+    groups.forEach(g => {
+      if (g.shareAllEvents) {
+        g.members.forEach(m => autoShareEmails.add(m));
+      }
+    });
+    const finalSharedWith = Array.from(autoShareEmails);
+
     if (user.isAnonymous) {
       const newEvent: CalendarEvent = {
         ...event,
+        sharedWith: finalSharedWith,
         id: `guest-${Date.now()}`,
         ownerId: user.uid,
       };
@@ -170,6 +206,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const eventData: any = {
         ...event,
+        sharedWith: finalSharedWith,
         ownerId: user.uid,
         startTime: Timestamp.fromDate(event.startTime),
       };
@@ -193,14 +230,27 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateEvent = async (id: string, event: Partial<CalendarEvent>) => {
     if (!user || id.startsWith('connected-')) return;
 
+    // Auto-share with groups that have shareAllEvents enabled
+    let finalSharedWith = event.sharedWith;
+    if (event.sharedWith !== undefined) {
+      const autoShareEmails = new Set<string>(event.sharedWith || []);
+      groups.forEach(g => {
+        if (g.shareAllEvents) {
+          g.members.forEach(m => autoShareEmails.add(m));
+        }
+      });
+      finalSharedWith = Array.from(autoShareEmails);
+    }
+
     if (user.isAnonymous) {
-      setEvents(prev => prev.map(e => e.id === id ? { ...e, ...event } : e));
+      setEvents(prev => prev.map(e => e.id === id ? { ...e, ...event, ...(finalSharedWith !== undefined && { sharedWith: finalSharedWith }) } : e));
       return;
     }
 
     try {
       const docRef = doc(db, 'events', id);
       const updateData: any = { ...event };
+      if (finalSharedWith !== undefined) updateData.sharedWith = finalSharedWith;
       if (event.startTime) updateData.startTime = Timestamp.fromDate(event.startTime);
       if (event.endTime) {
         updateData.endTime = Timestamp.fromDate(event.endTime);
@@ -242,8 +292,118 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const addGroup = async (group: Omit<Group, 'id' | 'ownerId'>) => {
+    if (!user) return;
+    
+    if (user.isAnonymous) {
+      const newGroup: Group = {
+        ...group,
+        id: `guest-group-${Date.now()}`,
+        ownerId: user.uid,
+      };
+      setGroups(prev => [...prev, newGroup]);
+      
+      if (group.shareAllEvents && group.members.length > 0) {
+        setEvents(prev => prev.map(e => {
+          if (e.ownerId !== user.uid) return e;
+          const currentShared = new Set(e.sharedWith || []);
+          group.members.forEach(m => currentShared.add(m));
+          return { ...e, sharedWith: Array.from(currentShared) };
+        }));
+      }
+      return;
+    }
+
+    try {
+      const groupData = {
+        ...group,
+        ownerId: user.uid,
+      };
+      await addDoc(collection(db, 'groups'), groupData);
+      
+      if (group.shareAllEvents && group.members.length > 0) {
+        const myEvents = events.filter(e => e.ownerId === user.uid);
+        for (const e of myEvents) {
+          const currentShared = new Set(e.sharedWith || []);
+          let changed = false;
+          group.members.forEach(m => {
+            if (!currentShared.has(m)) {
+              currentShared.add(m);
+              changed = true;
+            }
+          });
+          if (changed) {
+            await updateDoc(doc(db, 'events', e.id), { sharedWith: Array.from(currentShared) });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error adding group:', error);
+      throw error;
+    }
+  };
+
+  const updateGroup = async (id: string, group: Partial<Group>) => {
+    if (!user) return;
+
+    if (user.isAnonymous) {
+      setGroups(prev => prev.map(g => g.id === id ? { ...g, ...group } : g));
+      
+      if (group.shareAllEvents && group.members && group.members.length > 0) {
+        setEvents(prev => prev.map(e => {
+          if (e.ownerId !== user.uid) return e;
+          const currentShared = new Set(e.sharedWith || []);
+          group.members!.forEach(m => currentShared.add(m));
+          return { ...e, sharedWith: Array.from(currentShared) };
+        }));
+      }
+      return;
+    }
+
+    try {
+      const docRef = doc(db, 'groups', id);
+      await updateDoc(docRef, group);
+      
+      if (group.shareAllEvents && group.members && group.members.length > 0) {
+        const myEvents = events.filter(e => e.ownerId === user.uid);
+        for (const e of myEvents) {
+          const currentShared = new Set(e.sharedWith || []);
+          let changed = false;
+          group.members.forEach(m => {
+            if (!currentShared.has(m)) {
+              currentShared.add(m);
+              changed = true;
+            }
+          });
+          if (changed) {
+            await updateDoc(doc(db, 'events', e.id), { sharedWith: Array.from(currentShared) });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating group:', error);
+      throw error;
+    }
+  };
+
+  const deleteGroup = async (id: string) => {
+    if (!user) return;
+
+    if (user.isAnonymous) {
+      setGroups(prev => prev.filter(g => g.id !== id));
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'groups', id));
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      throw error;
+    }
+  };
+
   return (
-    <CalendarContext.Provider value={{ events, loading, addEvent, updateEvent, deleteEvent }}>
+    <CalendarContext.Provider value={{ events, groups, loading, addEvent, updateEvent, deleteEvent, addGroup, updateGroup, deleteGroup }}>
       {children}
     </CalendarContext.Provider>
   );
