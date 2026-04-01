@@ -32,6 +32,7 @@ export default function HelpModal({ onClose }: HelpModalProps) {
               <li><strong>Connect:</strong> Link your existing calendars (Google, Apple, Microsoft) via the Integrations menu.</li>
               <li><strong>Interact:</strong> Use the voice assistant (microphone icon) to add events or ask about your schedule.</li>
               <li><strong>Manage:</strong> View your schedule in Month, Week, or Day views. Click on dates with blue dots to see details.</li>
+              <li><strong>Groups & Sharing:</strong> Create groups (Users icon) to easily share events with multiple people at once. You can even set a group to automatically receive all your events.</li>
               <li><strong>Automate:</strong> Upload documents or use Smart Add to automatically extract and schedule events.</li>
             </ol>
           </section>
