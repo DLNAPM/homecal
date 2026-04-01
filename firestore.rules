@@ -120,7 +120,12 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.ownerId || request.auth.token.email in resource.data.sharedWith);
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.ownerId && isValidEvent(request.resource.data);
-      allow update: if isDocOwner() && isValidEvent(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow update: if isAuthenticated() && isValidEvent(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId &&
+                    (isDocOwner() || 
+                     (resource.data.sharedWith != null && request.auth.token.email in resource.data.sharedWith && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgedBy', 'sharedWith'])
+                     )
+                    );
       allow delete: if isDocOwner();
     }
 
