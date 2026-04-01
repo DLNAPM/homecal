@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile } from '../types';
-import { X, Shield, Check, XCircle } from 'lucide-react';
+import { X, Shield, Check, XCircle, Trash2, AlertTriangle } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface AdminModalProps {
   onClose: () => void;
@@ -12,6 +13,8 @@ export default function AdminModal({ onClose }: AdminModalProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -38,9 +41,32 @@ export default function AdminModal({ onClose }: AdminModalProps) {
       setUsers(users.map(u => u.uid === userId ? { ...u, isPremium: !currentStatus } : u));
     } catch (err) {
       console.error('Error updating user:', err);
-      alert('Failed to update user status.');
+      setError('Failed to update user status.');
     }
   };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'users', userToDelete));
+      setUsers(users.filter(u => u.uid !== userToDelete));
+      setUserToDelete(null);
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError('Failed to delete user.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const premiumCount = users.filter(u => u.isPremium).length;
+  const basicCount = users.length - premiumCount;
+  const pieData = [
+    { name: 'Premium', value: premiumCount },
+    { name: 'Basic', value: basicCount }
+  ];
+  const COLORS = ['#f59e0b', '#94a3b8']; // Amber for Premium, Slate for Basic
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -66,7 +92,33 @@ export default function AdminModal({ onClose }: AdminModalProps) {
             {error}
           </div>
         ) : (
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto flex flex-col gap-8">
+            {users.length > 0 && (
+              <div className="h-64 bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col items-center justify-center shrink-0">
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">User Distribution</h3>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b-2 border-slate-200">
@@ -104,21 +156,62 @@ export default function AdminModal({ onClose }: AdminModalProps) {
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => togglePremium(user.uid, user.isPremium || false)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          user.isPremium 
-                            ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' 
-                            : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                        }`}
-                      >
-                        {user.isPremium ? 'Downgrade to Basic' : 'Upgrade to Premium'}
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => togglePremium(user.uid, user.isPremium || false)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            user.isPremium 
+                              ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' 
+                              : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                          }`}
+                        >
+                          {user.isPremium ? 'Downgrade to Basic' : 'Upgrade to Premium'}
+                        </button>
+                        <button
+                          onClick={() => setUserToDelete(user.uid)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors"
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {userToDelete && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-4 text-red-600 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Delete User?</h3>
+              </div>
+              <p className="text-slate-600 mb-6">
+                Are you sure you want to delete this user? This action cannot be undone and will permanently remove their profile data.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setUserToDelete(null)}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete User'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
