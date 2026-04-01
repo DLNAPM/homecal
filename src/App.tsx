@@ -10,7 +10,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, isFaceLocked } = useAuth();
 
   if (loading) {
     return (
@@ -20,7 +20,7 @@ function AppContent() {
     );
   }
 
-  return user ? (
+  return (user && !isFaceLocked) ? (
     <CalendarProvider>
       <Dashboard />
     </CalendarProvider>

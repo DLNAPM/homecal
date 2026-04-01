@@ -4,9 +4,10 @@ import { LogIn, ScanFace, Calendar, UserCircle, HelpCircle, Mic, Sparkles, Link 
 import HelpModal from './HelpModal';
 
 export default function Login() {
-  const { signInWithGoogle, signInAsGuest, loading } = useAuth();
+  const { signInWithGoogle, signInAsGuest, loading, isFaceLocked, unlockWithFaceId, signOut, profile } = useAuth();
   const [error, setError] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const handleGoogleLogin = async () => {
     try {
@@ -29,8 +30,16 @@ export default function Login() {
   };
 
   const handleFaceLogin = () => {
-    // In a real app, this would use WebAuthn or a Face Recognition API
-    alert('Facial Recognition is a Premium Feature. Please login with Google first to upgrade your account.');
+    if (isFaceLocked) {
+      setIsScanning(true);
+      // Simulate face scan delay
+      setTimeout(() => {
+        setIsScanning(false);
+        unlockWithFaceId();
+      }, 1500);
+    } else {
+      alert('Facial Recognition is a Premium Feature. Please login with Google first to upgrade your account.');
+    }
   };
 
   if (loading) {
@@ -80,8 +89,12 @@ export default function Login() {
 
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-8">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-slate-900">Get Started</h2>
-            <p className="text-slate-500 mt-2">Sign in to access your calendar</p>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {isFaceLocked ? 'Welcome Back' : 'Get Started'}
+            </h2>
+            <p className="text-slate-500 mt-2">
+              {isFaceLocked ? `Unlock to access your calendar` : 'Sign in to access your calendar'}
+            </p>
           </div>
 
           {error && (
@@ -91,38 +104,64 @@ export default function Login() {
           )}
 
           <div className="space-y-4">
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
-            >
-              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-              Continue with Google
-            </button>
+            {isFaceLocked ? (
+              <>
+                <div className="flex justify-center mb-8">
+                  <div className={`w-24 h-24 rounded-full flex items-center justify-center ${isScanning ? 'bg-indigo-100 text-indigo-600 animate-pulse' : 'bg-slate-100 text-slate-600'}`}>
+                    <ScanFace className={`w-12 h-12 ${isScanning ? 'animate-bounce' : ''}`} />
+                  </div>
+                </div>
+                <button
+                  onClick={handleFaceLogin}
+                  disabled={isScanning}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-sm disabled:opacity-70"
+                >
+                  <ScanFace className="w-5 h-5" />
+                  {isScanning ? 'Scanning Face...' : 'Unlock with Face ID'}
+                </button>
+                <button
+                  onClick={signOut}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
+                >
+                  Sign Out Completely
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleGoogleLogin}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                  Continue with Google
+                </button>
 
-            <button
-              onClick={handleGuestLogin}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
-            >
-              <UserCircle className="w-5 h-5 text-slate-500" />
-              Test Drive as Guest
-            </button>
+                <button
+                  onClick={handleGuestLogin}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
+                >
+                  <UserCircle className="w-5 h-5 text-slate-500" />
+                  Test Drive as Guest
+                </button>
 
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-white text-slate-400 font-medium tracking-wide text-xs uppercase">Premium Feature</span>
-              </div>
-            </div>
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-3 bg-white text-slate-400 font-medium tracking-wide text-xs uppercase">Premium Feature</span>
+                  </div>
+                </div>
 
-            <button
-              onClick={handleFaceLogin}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-sm"
-            >
-              <ScanFace className="w-5 h-5" />
-              Face Login
-            </button>
+                <button
+                  onClick={handleFaceLogin}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-sm"
+                >
+                  <ScanFace className="w-5 h-5" />
+                  Face Login
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>

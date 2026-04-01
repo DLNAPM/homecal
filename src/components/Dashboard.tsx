@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle, Users, Shield } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle, Users, Shield, ScanFace } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
@@ -20,7 +20,7 @@ import Papa from 'papaparse';
 const localizer = momentLocalizer(moment);
 
 export default function Dashboard() {
-  const { user, profile, signOut, updateProfile } = useAuth();
+  const { user, profile, signOut, updateProfile, lockWithFaceId } = useAuth();
   const { events, loading, addEvent } = useCalendar();
   const [greetingShown, setGreetingShown] = useState(false);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
@@ -260,7 +260,12 @@ export default function Dashboard() {
               {profile?.photoURL && (
                 <img src={profile.photoURL} alt="Profile" className="h-8 w-8 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
               )}
-              <button onClick={signOut} className="text-slate-500 hover:text-slate-700">
+              {profile?.isPremium && (
+                <button onClick={lockWithFaceId} className="text-slate-500 hover:text-indigo-600 transition-colors" title="Lock with Face ID">
+                  <ScanFace className="h-5 w-5" />
+                </button>
+              )}
+              <button onClick={signOut} className="text-slate-500 hover:text-red-600 transition-colors" title="Sign Out">
                 <LogOut className="h-5 w-5" />
               </button>
             </div>
