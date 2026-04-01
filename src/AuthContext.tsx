@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, signInAnonymously } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, signInAnonymously, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from './firebase';
 import { UserProfile } from './types';
@@ -15,6 +15,7 @@ interface AuthContextType {
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   lockWithFaceId: () => void;
   unlockWithFaceId: () => void;
+  connectGoogleCalendar: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -91,6 +92,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const connectGoogleCalendar = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/calendar.events');
+      provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
+      provider.setCustomParameters({
+        prompt: 'consent'
+      });
+      await signInWithPopup(auth, provider);
+      
+      if (profile) {
+        const currentConnections = profile.connectedCalendars || [];
+        if (!currentConnections.includes('Google Calendar')) {
+          await updateProfile({ connectedCalendars: [...currentConnections, 'Google Calendar'] });
+        }
+      }
+    } catch (error) {
+      console.error('Error connecting Google Calendar', error);
+      throw error;
+    }
+  };
+
   const signInAsGuest = async () => {
     try {
       // Create a mock guest user to avoid requiring Firebase Anonymous Auth to be enabled
@@ -134,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isFaceLocked, signInWithGoogle, signInAsGuest, signOut, updateProfile, lockWithFaceId, unlockWithFaceId }}>
+    <AuthContext.Provider value={{ user, profile, loading, isFaceLocked, signInWithGoogle, signInAsGuest, signOut, updateProfile, lockWithFaceId, unlockWithFaceId, connectGoogleCalendar }}>
       {children}
     </AuthContext.Provider>
   );

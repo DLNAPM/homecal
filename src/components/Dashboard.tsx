@@ -587,7 +587,7 @@ function GreetingModal({ message, todayEvents, weekEvents, speak, onClose }: { m
 }
 
 function IntegrationsModal({ onClose }: { onClose: () => void }) {
-  const { profile, updateProfile } = useAuth();
+  const { profile, updateProfile, connectGoogleCalendar } = useAuth();
   const [connecting, setConnecting] = useState<string | null>(null);
   const [configuring, setConfiguring] = useState<string | null>(null);
   const [clientIdInput, setClientIdInput] = useState('');
@@ -595,12 +595,15 @@ function IntegrationsModal({ onClose }: { onClose: () => void }) {
   const handleConnect = async (provider: string, clientId?: string) => {
     setConnecting(provider);
     try {
-      let url = '';
       if (provider === 'Google Calendar') {
-        const res = await fetch(`/api/auth/google/url?clientId=${encodeURIComponent(clientId || '')}`);
-        const data = await res.json();
-        url = data.url;
-      } else if (provider === 'Microsoft 365' || provider === 'Microsoft Exchange') {
+        await connectGoogleCalendar();
+        setConnecting(null);
+        alert('Successfully connected to Google Calendar!');
+        return;
+      }
+
+      let url = '';
+      if (provider === 'Microsoft 365' || provider === 'Microsoft Exchange') {
         const res = await fetch(`/api/auth/microsoft/url?clientId=${encodeURIComponent(clientId || '')}`);
         const data = await res.json();
         url = data.url;
@@ -645,6 +648,10 @@ function IntegrationsModal({ onClose }: { onClose: () => void }) {
   };
 
   const initiateConnection = (provider: string) => {
+    if (provider === 'Google Calendar') {
+      handleConnect(provider);
+      return;
+    }
     const existingConfig = profile?.integrationConfigs?.[provider];
     if (provider !== 'Apple Calendar' && (!existingConfig || !existingConfig.clientId)) {
       setConfiguring(provider);
