@@ -37,5 +37,6 @@ export interface CalendarEvent {
   reminderMinutes?: number | null;
   reminderChime?: boolean;
   acknowledged?: boolean;
+  acknowledgedBy?: string[];
   snoozedUntil?: Date | null;
 }

@@ -11,6 +11,7 @@ import AnimatedAvatar from './AnimatedAvatar';
 import UploadModal from './UploadModal';
 import SmartAddModal from './SmartAddModal';
 import ReminderSystem from './ReminderSystem';
+import PendingInvites from './PendingInvites';
 import HelpModal from './HelpModal';
 import GroupsModal from './GroupsModal';
 import AdminModal from './AdminModal';
@@ -399,6 +400,7 @@ export default function Dashboard() {
       {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
 
       <ReminderSystem />
+      <PendingInvites />
 
       <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
         <AnimatedAvatar isSpeaking={isSpeaking} />

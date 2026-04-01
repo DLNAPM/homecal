@@ -95,6 +95,7 @@ service cloud.firestore {
              (!('reminderMinutes' in data) || data.reminderMinutes == null || data.reminderMinutes is number) &&
              (!('reminderChime' in data) || data.reminderChime is bool) &&
              (!('acknowledged' in data) || data.acknowledged is bool) &&
+             (!('acknowledgedBy' in data) || isValidList(data.acknowledgedBy, 50)) &&
              (!('snoozedUntil' in data) || data.snoozedUntil == null || data.snoozedUntil is timestamp);
     }
 

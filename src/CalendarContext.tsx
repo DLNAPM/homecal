@@ -6,6 +6,7 @@ import { Group, CalendarEvent } from './types';
 
 interface CalendarContextType {
   events: CalendarEvent[];
+  pendingEvents: CalendarEvent[];
   groups: Group[];
   loading: boolean;
   addEvent: (event: Omit<CalendarEvent, 'id' | 'ownerId'>) => Promise<void>;
@@ -14,6 +15,8 @@ interface CalendarContextType {
   addGroup: (group: Omit<Group, 'id' | 'ownerId'>) => Promise<void>;
   updateGroup: (id: string, group: Partial<Group>) => Promise<void>;
   deleteGroup: (id: string) => Promise<void>;
+  acknowledgeSharedEvent: (event: CalendarEvent) => Promise<void>;
+  declineSharedEvent: (event: CalendarEvent) => Promise<void>;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -21,12 +24,14 @@ const CalendarContext = createContext<CalendarContextType | undefined>(undefined
 export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [pendingEvents, setPendingEvents] = useState<CalendarEvent[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
       setEvents([]);
+      setPendingEvents([]);
       setGroups([]);
       setLoading(false);
       return;
@@ -137,7 +142,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     const unsubscribe2 = onSnapshot(q2, (snapshot) => {
-      const newEvents = snapshot.docs.map(doc => {
+      const sharedEvents = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -148,9 +153,14 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } as CalendarEvent;
       });
       
+      const accepted = sharedEvents.filter(e => e.ownerId === user.uid || (e.acknowledgedBy || []).includes(user.email!));
+      const pending = sharedEvents.filter(e => e.ownerId !== user.uid && !(e.acknowledgedBy || []).includes(user.email!));
+
+      setPendingEvents(pending);
+
       setEvents(prev => {
         const others = prev.filter(e => e.ownerId === user.uid || e.id.startsWith('connected-'));
-        const merged = [...others, ...newEvents];
+        const merged = [...others, ...accepted];
         // Remove duplicates just in case
         return Array.from(new Map(merged.map(item => [item.id, item])).values());
       });
@@ -402,8 +412,51 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const acknowledgeSharedEvent = async (event: CalendarEvent) => {
+    if (!user || !user.email) return;
+    
+    if (user.isAnonymous) {
+      setPendingEvents(prev => prev.filter(e => e.id !== event.id));
+      setEvents(prev => {
+        const others = prev.filter(e => e.id !== event.id);
+        return [...others, { ...event, acknowledgedBy: [...(event.acknowledgedBy || []), user.email!] }];
+      });
+      return;
+    }
+
+    try {
+      const currentAck = event.acknowledgedBy || [];
+      if (!currentAck.includes(user.email)) {
+        await updateDoc(doc(db, 'events', event.id), {
+          acknowledgedBy: [...currentAck, user.email]
+        });
+      }
+    } catch (err) {
+      console.error("Error acknowledging event", err);
+    }
+  };
+
+  const declineSharedEvent = async (event: CalendarEvent) => {
+    if (!user || !user.email) return;
+    
+    if (user.isAnonymous) {
+      setPendingEvents(prev => prev.filter(e => e.id !== event.id));
+      return;
+    }
+
+    try {
+      const currentShared = event.sharedWith || [];
+      const newShared = currentShared.filter(e => e !== user.email);
+      await updateDoc(doc(db, 'events', event.id), {
+        sharedWith: newShared
+      });
+    } catch (err) {
+      console.error("Error declining event", err);
+    }
+  };
+
   return (
-    <CalendarContext.Provider value={{ events, groups, loading, addEvent, updateEvent, deleteEvent, addGroup, updateGroup, deleteGroup }}>
+    <CalendarContext.Provider value={{ events, pendingEvents, groups, loading, addEvent, updateEvent, deleteEvent, addGroup, updateGroup, deleteGroup, acknowledgeSharedEvent, declineSharedEvent }}>
       {children}
     </CalendarContext.Provider>
   );
