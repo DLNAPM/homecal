@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle, Users } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle, Users, Shield } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
@@ -13,6 +13,7 @@ import SmartAddModal from './SmartAddModal';
 import ReminderSystem from './ReminderSystem';
 import HelpModal from './HelpModal';
 import GroupsModal from './GroupsModal';
+import AdminModal from './AdminModal';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showIntegrations, setShowIntegrations] = useState(false);
   const [showGroups, setShowGroups] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDictateModal, setShowDictateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -245,6 +247,16 @@ export default function Dashboard() {
               <HelpCircle className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
+              {user?.email === 'dlaniger.napm.consulting@gmail.com' && (
+                <button
+                  onClick={() => setShowAdmin(true)}
+                  className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-full transition-colors flex items-center gap-1"
+                  title="Admin Dashboard"
+                >
+                  <Shield className="h-5 w-5" />
+                  <span className="text-sm font-medium hidden sm:inline">Admin</span>
+                </button>
+              )}
               {profile?.photoURL && (
                 <img src={profile.photoURL} alt="Profile" className="h-8 w-8 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
               )}
@@ -379,6 +391,7 @@ export default function Dashboard() {
 
       {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
       {showGroups && <GroupsModal onClose={() => setShowGroups(false)} />}
+      {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
 
       <ReminderSystem />
 

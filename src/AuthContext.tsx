@@ -37,14 +37,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
+            const data = docSnap.data() as UserProfile;
+            if (currentUser.email === 'dlaniger.napm.consulting@gmail.com' && !data.isPremium) {
+              const updatedProfile = { ...data, isPremium: true };
+              await setDoc(docRef, updatedProfile, { merge: true });
+              setProfile(updatedProfile);
+            } else {
+              setProfile(data);
+            }
           } else {
             const newProfile: UserProfile = {
               uid: currentUser.uid,
               email: currentUser.email!,
               displayName: currentUser.displayName || undefined,
               photoURL: currentUser.photoURL || undefined,
-              isPremium: false,
+              isPremium: currentUser.email === 'dlaniger.napm.consulting@gmail.com',
             };
             await setDoc(docRef, newProfile);
             setProfile(newProfile);
