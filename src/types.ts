@@ -23,7 +23,7 @@ export interface CalendarEvent {
   title: string;
   description?: string;
   startTime: Date;
-  endTime: Date;
+  endTime?: Date | null;
   sharedWith?: string[];
   reminderMinutes?: number | null;
   reminderChime?: boolean;

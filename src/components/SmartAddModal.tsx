@@ -30,10 +30,10 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
             properties: {
               title: { type: Type.STRING, description: "The title of the event" },
               startTime: { type: Type.STRING, description: "The start time of the event in ISO 8601 format" },
-              endTime: { type: Type.STRING, description: "The end time of the event in ISO 8601 format. If not specified, default to 1 hour after start time." },
+              endTime: { type: Type.STRING, description: "The end time of the event in ISO 8601 format (optional)" },
               description: { type: Type.STRING, description: "Any additional details, including location if mentioned." }
             },
-            required: ["title", "startTime", "endTime"]
+            required: ["title", "startTime"]
           }
         }
       });
@@ -46,7 +46,7 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
       setParsedEvent({
         title: data.title,
         startTime: new Date(data.startTime),
-        endTime: new Date(data.endTime),
+        endTime: data.endTime ? new Date(data.endTime) : undefined,
         description: data.description || ''
       });
     } catch (err: any) {
@@ -107,10 +107,12 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
                 <span className="text-xs font-semibold text-slate-500 uppercase">Start Time</span>
                 <p className="text-slate-700">{parsedEvent.startTime.toLocaleString()}</p>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase">End Time</span>
-                <p className="text-slate-700">{parsedEvent.endTime.toLocaleString()}</p>
-              </div>
+              {parsedEvent.endTime && (
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 uppercase">End Time</span>
+                  <p className="text-slate-700">{parsedEvent.endTime.toLocaleString()}</p>
+                </div>
+              )}
               {parsedEvent.description && (
                 <div>
                   <span className="text-xs font-semibold text-slate-500 uppercase">Description / Location</span>

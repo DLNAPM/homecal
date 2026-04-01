@@ -109,7 +109,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           id: doc.id,
           ...data,
           startTime: (data.startTime as Timestamp).toDate(),
-          endTime: (data.endTime as Timestamp).toDate(),
+          endTime: data.endTime ? (data.endTime as Timestamp).toDate() : undefined,
           snoozedUntil: data.snoozedUntil ? (data.snoozedUntil as Timestamp).toDate() : undefined,
         } as CalendarEvent;
       });
@@ -133,7 +133,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           id: doc.id,
           ...data,
           startTime: (data.startTime as Timestamp).toDate(),
-          endTime: (data.endTime as Timestamp).toDate(),
+          endTime: data.endTime ? (data.endTime as Timestamp).toDate() : undefined,
           snoozedUntil: data.snoozedUntil ? (data.snoozedUntil as Timestamp).toDate() : undefined,
         } as CalendarEvent;
       });
@@ -172,8 +172,10 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ...event,
         ownerId: user.uid,
         startTime: Timestamp.fromDate(event.startTime),
-        endTime: Timestamp.fromDate(event.endTime),
       };
+      if (event.endTime) {
+        eventData.endTime = Timestamp.fromDate(event.endTime);
+      }
       if (event.snoozedUntil) {
         eventData.snoozedUntil = Timestamp.fromDate(event.snoozedUntil);
       }
@@ -200,7 +202,11 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const docRef = doc(db, 'events', id);
       const updateData: any = { ...event };
       if (event.startTime) updateData.startTime = Timestamp.fromDate(event.startTime);
-      if (event.endTime) updateData.endTime = Timestamp.fromDate(event.endTime);
+      if (event.endTime) {
+        updateData.endTime = Timestamp.fromDate(event.endTime);
+      } else if (event.endTime === null) {
+        updateData.endTime = null;
+      }
       if (event.snoozedUntil) {
         updateData.snoozedUntil = Timestamp.fromDate(event.snoozedUntil);
       } else if (event.snoozedUntil === null) {

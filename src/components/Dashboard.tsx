@@ -159,7 +159,7 @@ export default function Dashboard() {
   const components = React.useMemo(() => ({
     dateCellWrapper: ({ value, children }: any) => {
       const hasEvents = events.some(e => 
-        moment(e.startTime).isSame(value, 'day') || moment(e.endTime).isSame(value, 'day') || (moment(e.startTime).isBefore(value) && moment(e.endTime).isAfter(value))
+        moment(e.startTime).isSame(value, 'day') || (e.endTime && moment(e.endTime).isSame(value, 'day')) || (e.endTime && moment(e.startTime).isBefore(value) && moment(e.endTime).isAfter(value))
       );
 
       return React.cloneElement(children as React.ReactElement<any>, {
@@ -194,7 +194,7 @@ export default function Dashboard() {
     id: e.id,
     title: e.title,
     start: e.startTime,
-    end: e.endTime,
+    end: e.endTime || new Date(e.startTime.getTime() + 60 * 60 * 1000),
     resource: e
   }));
 
@@ -300,7 +300,7 @@ export default function Dashboard() {
             onDrillDown={(date) => {
               if (view === Views.MONTH) {
                 const hasEvents = events.some(e => 
-                  moment(e.startTime).isSame(date, 'day') || moment(e.endTime).isSame(date, 'day') || (moment(e.startTime).isBefore(date) && moment(e.endTime).isAfter(date))
+                  moment(e.startTime).isSame(date, 'day') || (e.endTime && moment(e.endTime).isSame(date, 'day')) || (e.endTime && moment(e.startTime).isBefore(date) && moment(e.endTime).isAfter(date))
                 );
                 if (hasEvents) {
                   setDate(date);
@@ -314,7 +314,7 @@ export default function Dashboard() {
             onSelectSlot={(slotInfo) => {
               if (view === Views.MONTH && slotInfo.action === 'click') {
                 const hasEvents = events.some(e => 
-                  moment(e.startTime).isSame(slotInfo.start, 'day') || moment(e.endTime).isSame(slotInfo.start, 'day') || (moment(e.startTime).isBefore(slotInfo.start) && moment(e.endTime).isAfter(slotInfo.start))
+                  moment(e.startTime).isSame(slotInfo.start, 'day') || (e.endTime && moment(e.endTime).isSame(slotInfo.start, 'day')) || (e.endTime && moment(e.startTime).isBefore(slotInfo.start) && moment(e.endTime).isAfter(slotInfo.start))
                 );
                 if (hasEvents) {
                   setDate(slotInfo.start);
@@ -722,6 +722,9 @@ function EventModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('12:00');
+  const [hasEndTime, setHasEndTime] = useState(false);
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [endTime, setEndTime] = useState('13:00');
   const [sharedWith, setSharedWith] = useState('');
   const [reminderMinutes, setReminderMinutes] = useState<number | ''>('');
   const [reminderChime, setReminderChime] = useState(false);
@@ -729,7 +732,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const start = new Date(`${date}T${time}`);
-    const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour later
+    const end = hasEndTime ? new Date(`${endDate}T${endTime}`) : undefined;
     
     await addEvent({
       title,
@@ -761,7 +764,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
               <input 
                 type="date" 
                 required
@@ -771,7 +774,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Time</label>
               <input 
                 type="time" 
                 required
@@ -780,6 +783,41 @@ function EventModal({ onClose }: { onClose: () => void }) {
                 className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
+          </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasEndTime}
+                onChange={e => setHasEndTime(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+              />
+              Has End Time
+            </label>
+            {hasEndTime && (
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+                  <input 
+                    type="date" 
+                    required={hasEndTime}
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">End Time</label>
+                  <input 
+                    type="time" 
+                    required={hasEndTime}
+                    value={endTime}
+                    onChange={e => setEndTime(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Reminder</label>
@@ -841,6 +879,9 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
   const [title, setTitle] = useState(event.title);
   const [date, setDate] = useState(format(event.startTime, 'yyyy-MM-dd'));
   const [time, setTime] = useState(format(event.startTime, 'HH:mm'));
+  const [hasEndTime, setHasEndTime] = useState(!!event.endTime);
+  const [endDate, setEndDate] = useState(event.endTime ? format(event.endTime, 'yyyy-MM-dd') : format(event.startTime, 'yyyy-MM-dd'));
+  const [endTime, setEndTime] = useState(event.endTime ? format(event.endTime, 'HH:mm') : format(new Date(event.startTime.getTime() + 60 * 60 * 1000), 'HH:mm'));
   const [sharedWith, setSharedWith] = useState(event.sharedWith?.join(', ') || '');
   const [reminderMinutes, setReminderMinutes] = useState<number | ''>(event.reminderMinutes || '');
   const [reminderChime, setReminderChime] = useState(event.reminderChime || false);
@@ -853,7 +894,7 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
     e.preventDefault();
     if (isConnectedEvent) return;
     const start = new Date(`${date}T${time}`);
-    const end = new Date(start.getTime() + (event.endTime.getTime() - event.startTime.getTime()));
+    const end = hasEndTime ? new Date(`${endDate}T${endTime}`) : null;
     
     await updateEvent(event.id, {
       title,
@@ -900,7 +941,7 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
               <input 
                 type="date" 
                 required
@@ -911,7 +952,7 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Time</label>
               <input 
                 type="time" 
                 required
@@ -921,6 +962,44 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
                 className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
               />
             </div>
+          </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2 cursor-pointer">
+              <input
+                type="checkbox"
+                disabled={isConnectedEvent}
+                checked={hasEndTime}
+                onChange={e => setHasEndTime(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 disabled:opacity-50"
+              />
+              Has End Time
+            </label>
+            {hasEndTime && (
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+                  <input 
+                    type="date" 
+                    required={hasEndTime}
+                    disabled={isConnectedEvent}
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">End Time</label>
+                  <input 
+                    type="time" 
+                    required={hasEndTime}
+                    disabled={isConnectedEvent}
+                    value={endTime}
+                    onChange={e => setEndTime(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Reminder</label>
@@ -1080,9 +1159,9 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
               title: { type: Type.STRING, description: 'The title of the event' },
               description: { type: Type.STRING, description: 'Optional description' },
               startTimeISO: { type: Type.STRING, description: 'ISO 8601 start time' },
-              endTimeISO: { type: Type.STRING, description: 'ISO 8601 end time (default to 1 hour after start if not specified)' }
+              endTimeISO: { type: Type.STRING, description: 'ISO 8601 end time (optional)' }
             },
-            required: ['title', 'startTimeISO', 'endTimeISO']
+            required: ['title', 'startTimeISO']
           }
         }
       });
@@ -1104,7 +1183,7 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
         title: parsed.title || text || 'New Voice Appointment',
         description: parsed.description || '',
         startTime: parsed.startTimeISO ? new Date(parsed.startTimeISO) : new Date(now.getTime() + 60 * 60 * 1000),
-        endTime: parsed.endTimeISO ? new Date(parsed.endTimeISO) : new Date(now.getTime() + 2 * 60 * 60 * 1000),
+        endTime: parsed.endTimeISO ? new Date(parsed.endTimeISO) : undefined,
       };
 
       await addEvent(event);
