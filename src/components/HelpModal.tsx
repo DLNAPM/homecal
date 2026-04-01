@@ -1,22 +1,84 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Volume2, Square } from 'lucide-react';
 
 interface HelpModalProps {
   onClose: () => void;
 }
 
 export default function HelpModal({ onClose }: HelpModalProps) {
+  const [isDictating, setIsDictating] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  const handleDictateToggle = () => {
+    if (isDictating) {
+      window.speechSynthesis.cancel();
+      setIsDictating(false);
+    } else {
+      const textToSpeak = `
+        About HomeCal.
+        Description: HomeCal is an AI-powered calendar and scheduling assistant designed to help you manage your appointments, dictate your agenda, and seamlessly organize your life using natural language and voice commands.
+        How to Use:
+        1. Connect: Link your existing calendars via the Integrations menu.
+        2. Interact: Use the voice assistant to add events or ask about your schedule.
+        3. Manage: View your schedule in Month, Week, or Day views.
+        4. Groups and Sharing: Create groups to easily share events with multiple people at once.
+        5. Automate: Upload documents or use Smart Add to automatically extract and schedule events.
+        Intended Audience: This app is designed for professionals, individuals with busy schedules, and anyone looking for hands-free, AI-assisted calendar management.
+        Disclaimer: This application is intended for personal and professional scheduling assistance only. It is not intended for storing highly sensitive medical records, confidential financial data, or serving as a sole system of record for critical life-safety events. AI features may occasionally misinterpret voice or text inputs; always verify important appointments independently.
+      `;
+      
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.onend = () => setIsDictating(false);
+      utterance.onerror = () => setIsDictating(false);
+      
+      window.speechSynthesis.speak(utterance);
+      setIsDictating(true);
+    }
+  };
+
+  const handleClose = () => {
+    window.speechSynthesis.cancel();
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 relative max-h-[90vh] overflow-y-auto">
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
         >
           <X className="w-6 h-6" />
         </button>
         
-        <h2 className="text-3xl font-bold text-slate-900 mb-6">About HomeCal</h2>
+        <div className="flex items-center justify-between mb-6 pr-12">
+          <h2 className="text-3xl font-bold text-slate-900">About HomeCal</h2>
+          <button
+            onClick={handleDictateToggle}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors ${
+              isDictating 
+                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+            }`}
+          >
+            {isDictating ? (
+              <>
+                <Square className="w-4 h-4" />
+                Stop Dictation
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-4 h-4" />
+                Dictate
+              </>
+            )}
+          </button>
+        </div>
         
         <div className="space-y-6 text-slate-700">
           <section>
@@ -57,7 +119,7 @@ export default function HelpModal({ onClose }: HelpModalProps) {
         
         <div className="mt-8 flex justify-end">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
           >
             Got it
