@@ -30,6 +30,7 @@ export interface CalendarEvent {
   ownerId: string;
   title: string;
   description?: string;
+  comment?: string;
   startTime: Date;
   endTime?: Date | null;
   sharedWith?: string[];

@@ -20,6 +20,7 @@ export default function UploadModal({ onClose }: { onClose: () => void }) {
   
   const optionalFields = [
     { name: 'description', type: 'string', description: 'Additional details about the appointment' },
+    { name: 'comment', type: 'string', description: 'Extra details or comments about the event' },
     { name: 'sharedWith', type: 'string', description: 'Comma-separated email addresses' },
     { name: 'reminderMinutes', type: 'number', description: 'Minutes before start time to trigger reminder (e.g., 5, 15, 30, 60)' },
   ];
@@ -98,6 +99,10 @@ export default function UploadModal({ onClose }: { onClose: () => void }) {
 
         if (row.description) {
           eventData.description = String(row.description);
+        }
+
+        if (row.comment) {
+          eventData.comment = String(row.comment);
         }
 
         if (row.sharedWith) {

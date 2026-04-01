@@ -748,6 +748,7 @@ function IntegrationsModal({ onClose }: { onClose: () => void }) {
 function EventModal({ onClose }: { onClose: () => void }) {
   const { addEvent, groups } = useCalendar();
   const [title, setTitle] = useState('');
+  const [comment, setComment] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('12:00');
   const [hasEndTime, setHasEndTime] = useState(false);
@@ -764,6 +765,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
     
     await addEvent({
       title,
+      comment,
       startTime: start,
       endTime: end,
       sharedWith: sharedWith ? sharedWith.split(',').map(s => s.trim()) : [],
@@ -788,6 +790,15 @@ function EventModal({ onClose }: { onClose: () => void }) {
               onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               placeholder="Meeting with Jane"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Comment / Details</label>
+            <textarea 
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none h-20"
+              placeholder="Extra details about the event..."
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -925,6 +936,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
 function EditEventModal({ event, onClose }: { event: any, onClose: () => void }) {
   const { updateEvent, deleteEvent, groups } = useCalendar();
   const [title, setTitle] = useState(event.title);
+  const [comment, setComment] = useState(event.comment || '');
   const [date, setDate] = useState(format(event.startTime, 'yyyy-MM-dd'));
   const [time, setTime] = useState(format(event.startTime, 'HH:mm'));
   const [hasEndTime, setHasEndTime] = useState(!!event.endTime);
@@ -946,6 +958,7 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
     
     await updateEvent(event.id, {
       title,
+      comment,
       startTime: start,
       endTime: end,
       sharedWith: sharedWith ? sharedWith.split(',').map(s => s.trim()) : [],
@@ -985,6 +998,16 @@ function EditEventModal({ event, onClose }: { event: any, onClose: () => void })
               value={title}
               onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50 disabled:bg-slate-50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Comment / Details</label>
+            <textarea 
+              disabled={isConnectedEvent}
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none h-20 disabled:opacity-50 disabled:bg-slate-50"
+              placeholder="Extra details about the event..."
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1217,24 +1240,28 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
       
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Parse this voice command into a calendar event. Today is ${now.toISOString()}. 
+        contents: `Parse this voice command into calendar events. If multiple days or distinct events are mentioned, create multiple events. Today is ${now.toISOString()}. 
         Command: "${text}"`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING, description: 'The title of the event' },
-              description: { type: Type.STRING, description: 'Optional description' },
-              startTimeISO: { type: Type.STRING, description: 'ISO 8601 start time' },
-              endTimeISO: { type: Type.STRING, description: 'ISO 8601 end time (optional)' }
-            },
-            required: ['title', 'startTimeISO']
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING, description: 'The title of the event' },
+                description: { type: Type.STRING, description: 'Optional description' },
+                comment: { type: Type.STRING, description: 'Extra details or comments about the event' },
+                startTimeISO: { type: Type.STRING, description: 'ISO 8601 start time' },
+                endTimeISO: { type: Type.STRING, description: 'ISO 8601 end time (optional)' }
+              },
+              required: ['title', 'startTimeISO']
+            }
           }
         }
       });
 
-      let responseText = response.text || '{}';
+      let responseText = response.text || '[]';
       // Strip markdown code blocks if present
       if (responseText.startsWith('```')) {
         const match = responseText.match(/```(?:json)?\n([\s\S]*?)\n```/);
@@ -1246,17 +1273,29 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
       }
       
       const parsed = JSON.parse(responseText);
+      const eventsData = Array.isArray(parsed) ? parsed : [parsed];
       
-      const event = {
-        title: parsed.title || text || 'New Voice Appointment',
-        description: parsed.description || '',
-        startTime: parsed.startTimeISO ? new Date(parsed.startTimeISO) : new Date(now.getTime() + 60 * 60 * 1000),
-        endTime: parsed.endTimeISO ? new Date(parsed.endTimeISO) : undefined,
-      };
+      for (const evtData of eventsData) {
+        if (!evtData.title && !evtData.startTimeISO && eventsData.length === 1) {
+           evtData.title = text || 'New Voice Appointment';
+        }
+        
+        const event = {
+          title: evtData.title || 'New Voice Appointment',
+          description: evtData.description || '',
+          comment: evtData.comment || '',
+          startTime: evtData.startTimeISO ? new Date(evtData.startTimeISO) : new Date(now.getTime() + 60 * 60 * 1000),
+          endTime: evtData.endTimeISO ? new Date(evtData.endTimeISO) : undefined,
+        };
 
-      await addEvent(event);
+        await addEvent(event);
+      }
       
-      speak(`I've added ${event.title} to your calendar.`);
+      if (eventsData.length > 1) {
+        speak(`I've added ${eventsData.length} events to your calendar.`);
+      } else if (eventsData.length === 1) {
+        speak(`I've added ${eventsData[0].title || 'the event'} to your calendar.`);
+      }
       
       setTimeout(() => {
         onClose();

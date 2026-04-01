@@ -7,7 +7,7 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [parsedEvent, setParsedEvent] = useState<any>(null);
+  const [parsedEvents, setParsedEvents] = useState<any[] | null>(null);
   const { addEvent } = useCalendar();
 
   const handleParse = async () => {
@@ -19,36 +19,43 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Extract appointment details from the following text. The current date and time is ${new Date().toString()}.
+        contents: `Extract appointment details from the following text. If there is more than 1 day mentioned or multiple distinct events, create multiple events. The current date and time is ${new Date().toString()}.
         
         Text:
         ${text}`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING, description: "The title of the event" },
-              startTime: { type: Type.STRING, description: "The start time of the event in ISO 8601 format" },
-              endTime: { type: Type.STRING, description: "The end time of the event in ISO 8601 format (optional)" },
-              description: { type: Type.STRING, description: "Any additional details, including location if mentioned." }
-            },
-            required: ["title", "startTime"]
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING, description: "The title of the event" },
+                startTime: { type: Type.STRING, description: "The start time of the event in ISO 8601 format" },
+                endTime: { type: Type.STRING, description: "The end time of the event in ISO 8601 format (optional)" },
+                description: { type: Type.STRING, description: "Any additional details, including location if mentioned." },
+                comment: { type: Type.STRING, description: "Extra details or comments about the event." }
+              },
+              required: ["title", "startTime"]
+            }
           }
         }
       });
 
-      const data = JSON.parse(response.text || '{}');
-      if (!data.title || !data.startTime) {
+      const data = JSON.parse(response.text || '[]');
+      if (!Array.isArray(data) || data.length === 0) {
         throw new Error("Could not extract event details.");
       }
 
-      setParsedEvent({
-        title: data.title,
-        startTime: new Date(data.startTime),
-        endTime: data.endTime ? new Date(data.endTime) : undefined,
-        description: data.description || ''
-      });
+      const events = data.map((evt: any) => ({
+        title: evt.title,
+        startTime: new Date(evt.startTime),
+        endTime: evt.endTime ? new Date(evt.endTime) : undefined,
+        description: evt.description || '',
+        comment: evt.comment || ''
+      }));
+
+      setParsedEvents(events);
     } catch (err: any) {
       setError(err.message || "Failed to parse event details.");
     } finally {
@@ -57,13 +64,15 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleConfirm = async () => {
-    if (!parsedEvent) return;
+    if (!parsedEvents || parsedEvents.length === 0) return;
     setLoading(true);
     try {
-      await addEvent(parsedEvent);
+      for (const evt of parsedEvents) {
+        await addEvent(evt);
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || "Failed to add event.");
+      setError(err.message || "Failed to add events.");
       setLoading(false);
     }
   };
@@ -76,10 +85,10 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
           Smart Add Event
         </h2>
         
-        {!parsedEvent ? (
+        {!parsedEvents ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              Paste a text message, email, or any text containing event details. We'll automatically extract the title, date, and time.
+              Paste a text message, email, or any text containing event details. We'll automatically extract the title, date, and time. If multiple days or events are mentioned, we'll create multiple events.
             </p>
             <textarea
               value={text}
@@ -97,33 +106,42 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-              <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase">Title</span>
-                <p className="font-medium text-slate-900">{parsedEvent.title}</p>
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase">Start Time</span>
-                <p className="text-slate-700">{parsedEvent.startTime.toLocaleString()}</p>
-              </div>
-              {parsedEvent.endTime && (
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <h3 className="font-semibold text-slate-800">Found {parsedEvents.length} Event{parsedEvents.length !== 1 ? 's' : ''}:</h3>
+            {parsedEvents.map((evt, idx) => (
+              <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 mb-4">
                 <div>
-                  <span className="text-xs font-semibold text-slate-500 uppercase">End Time</span>
-                  <p className="text-slate-700">{parsedEvent.endTime.toLocaleString()}</p>
+                  <span className="text-xs font-semibold text-slate-500 uppercase">Title</span>
+                  <p className="font-medium text-slate-900">{evt.title}</p>
                 </div>
-              )}
-              {parsedEvent.description && (
                 <div>
-                  <span className="text-xs font-semibold text-slate-500 uppercase">Description / Location</span>
-                  <p className="text-slate-700">{parsedEvent.description}</p>
+                  <span className="text-xs font-semibold text-slate-500 uppercase">Start Time</span>
+                  <p className="text-slate-700">{evt.startTime.toLocaleString()}</p>
                 </div>
-              )}
-            </div>
+                {evt.endTime && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500 uppercase">End Time</span>
+                    <p className="text-slate-700">{evt.endTime.toLocaleString()}</p>
+                  </div>
+                )}
+                {evt.description && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500 uppercase">Description / Location</span>
+                    <p className="text-slate-700">{evt.description}</p>
+                  </div>
+                )}
+                {evt.comment && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500 uppercase">Comment</span>
+                    <p className="text-slate-700">{evt.comment}</p>
+                  </div>
+                )}
+              </div>
+            ))}
             {error && <p className="text-red-600 text-sm">{error}</p>}
-            <div className="flex gap-3">
+            <div className="flex gap-3 sticky bottom-0 bg-white pt-2">
               <button
-                onClick={() => setParsedEvent(null)}
+                onClick={() => setParsedEvents(null)}
                 className="flex-1 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition-colors"
                 disabled={loading}
               >
@@ -134,7 +152,7 @@ export default function SmartAddModal({ onClose }: { onClose: () => void }) {
                 disabled={loading}
                 className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Add to Calendar'}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : `Add ${parsedEvents.length} Event${parsedEvents.length !== 1 ? 's' : ''}`}
               </button>
             </div>
           </div>
