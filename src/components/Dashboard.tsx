@@ -222,39 +222,39 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-16 lg:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 text-blue-600 shrink-0 mr-4">
-            <CalendarIcon className="h-6 w-6" />
-            <span className="text-xl font-bold text-slate-900 hidden sm:block">HomeCal</span>
+            <CalendarIcon className="h-6 w-6 lg:h-8 lg:w-8" />
+            <span className="text-xl lg:text-2xl font-bold text-slate-900 hidden sm:block">HomeCal</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
             <button
               onClick={() => setShowVoiceAssistant(true)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors font-medium text-sm shrink-0"
+              className="flex items-center gap-2 px-3 sm:px-4 lg:px-6 py-2 lg:py-3 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors font-medium text-sm lg:text-base shrink-0 border-2 border-blue-200"
             >
-              <Mic className="h-4 w-4" />
+              <Mic className="h-4 w-4 lg:h-5 lg:w-5" />
               <span className="hidden sm:inline">Voice Assistant</span>
             </button>
             <button
               onClick={() => setShowIntegrations(true)}
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors shrink-0"
+              className="p-2 lg:p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors shrink-0"
               title="Integrations"
             >
-              <Link className="h-5 w-5" />
+              <Link className="h-5 w-5 lg:h-6 lg:w-6" />
             </button>
             <button
               onClick={() => setShowGroups(true)}
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors shrink-0"
+              className="p-2 lg:p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors shrink-0"
               title="Manage Groups"
             >
-              <Users className="h-5 w-5" />
+              <Users className="h-5 w-5 lg:h-6 lg:w-6" />
             </button>
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors shrink-0"
+              className="p-2 lg:p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors shrink-0"
               title="Settings"
             >
-              <Settings className="h-5 w-5" />
+              <Settings className="h-5 w-5 lg:h-6 lg:w-6" />
             </button>
             <button
               onClick={() => setShowHelpModal(true)}
@@ -293,42 +293,42 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col">
+      <main className="max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 flex-1 flex flex-col">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <h1 className="text-2xl font-bold text-slate-900">Your Calendar</h1>
-          <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 sm:gap-3">
+          <h1 className="text-2xl lg:text-4xl font-bold text-slate-900">Your Calendar</h1>
+          <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 sm:gap-3 lg:gap-4">
             <button 
               onClick={() => setShowSmartAddModal(true)}
-              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm lg:text-base font-medium shadow-sm"
             >
-              <Sparkles className="h-4 w-4 text-blue-600" />
+              <Sparkles className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
               <span className="truncate">Smart Add</span>
             </button>
             <button 
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm lg:text-base font-medium shadow-sm"
             >
-              <Upload className="h-4 w-4" />
+              <Upload className="h-4 w-4 lg:h-5 lg:w-5" />
               <span className="truncate">Upload</span>
             </button>
             <button 
               onClick={() => setShowDictateModal(true)}
-              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm lg:text-base font-medium shadow-sm"
             >
-              <Volume2 className="h-4 w-4" />
+              <Volume2 className="h-4 w-4 lg:h-5 lg:w-5" />
               <span className="truncate">Dictate Agenda</span>
             </button>
             <button 
               onClick={() => setShowEventModal(true)}
-              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm lg:text-base font-medium shadow-sm"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 lg:h-5 lg:w-5" />
               <span className="truncate">New Event</span>
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex-1 min-h-[600px] flex flex-col">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 lg:p-6 flex-1 min-h-[600px] lg:min-h-[800px] flex flex-col text-base lg:text-lg">
           <Calendar
             localizer={localizer}
             events={calendarEvents}
@@ -1392,22 +1392,22 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center relative overflow-hidden">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Voice Assistant</h2>
-        <p className="text-slate-500 mb-8">"Add a meeting with John tomorrow at 2pm"</p>
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md lg:max-w-2xl w-full p-8 lg:p-12 text-center relative overflow-hidden">
+        <h2 className="text-2xl lg:text-4xl font-bold text-slate-900 mb-2 lg:mb-4">Voice Assistant</h2>
+        <p className="text-slate-500 lg:text-xl mb-8 lg:mb-12">"Add a meeting with John tomorrow at 2pm"</p>
         
-        <div className="relative flex justify-center items-center h-40 mb-8">
+        <div className="relative flex justify-center items-center h-40 lg:h-56 mb-8 lg:mb-12">
           {listening && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-32 h-32 bg-blue-100 rounded-full animate-ping opacity-75"></div>
-              <div className="absolute w-24 h-24 bg-blue-200 rounded-full animate-pulse"></div>
+              <div className="w-32 h-32 lg:w-48 lg:h-48 bg-blue-100 rounded-full animate-ping opacity-75"></div>
+              <div className="absolute w-24 h-24 lg:w-36 lg:h-36 bg-blue-200 rounded-full animate-pulse"></div>
             </div>
           )}
           
           <button
             onClick={listening ? undefined : startListening}
             disabled={processing}
-            className={`relative z-10 h-20 w-20 rounded-full flex items-center justify-center transition-all ${
+            className={`relative z-10 h-20 w-20 lg:h-32 lg:w-32 rounded-full flex items-center justify-center transition-all ${
               listening 
                 ? 'bg-blue-600 text-white scale-110 shadow-lg shadow-blue-600/30' 
                 : processing
@@ -1415,25 +1415,25 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
                 : 'bg-slate-900 text-white hover:bg-slate-800 hover:scale-105 shadow-xl'
             }`}
           >
-            <Mic className={`h-8 w-8 ${listening ? 'animate-pulse' : ''}`} />
+            <Mic className={`h-8 w-8 lg:h-12 lg:w-12 ${listening ? 'animate-pulse' : ''}`} />
           </button>
         </div>
 
-        <div className="min-h-[60px] flex items-center justify-center">
+        <div className="min-h-[60px] lg:min-h-[80px] flex items-center justify-center">
           {transcript ? (
-            <p className="text-lg text-slate-700 font-medium">"{transcript}"</p>
+            <p className="text-lg lg:text-2xl text-slate-700 font-medium">"{transcript}"</p>
           ) : processing ? (
-            <p className="text-blue-600 font-medium animate-pulse">Processing with AI...</p>
+            <p className="text-blue-600 lg:text-xl font-medium animate-pulse">Processing with AI...</p>
           ) : (
-            <p className="text-slate-400">Tap the microphone to speak</p>
+            <p className="text-slate-400 lg:text-xl">Tap the microphone to speak</p>
           )}
         </div>
 
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+          className="absolute top-4 right-4 lg:top-6 lg:right-6 p-2 lg:p-4 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
         >
-          ✕
+          <span className="text-xl lg:text-2xl">✕</span>
         </button>
       </div>
     </div>
