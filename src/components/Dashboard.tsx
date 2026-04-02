@@ -389,7 +389,13 @@ export default function Dashboard() {
       )}
 
       {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
+        <SettingsModal 
+          onClose={() => setShowSettings(false)} 
+          onOpenFaceIdSetup={() => {
+            setShowSettings(false);
+            setShowFaceIdSetup(true);
+          }}
+        />
       )}
 
       {showDictateModal && (
@@ -1428,7 +1434,7 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
   );
 }
 
-function SettingsModal({ onClose }: { onClose: () => void }) {
+function SettingsModal({ onClose, onOpenFaceIdSetup }: { onClose: () => void, onOpenFaceIdSetup: () => void }) {
   const { profile, updateProfile } = useAuth();
   const [voicePreference, setVoicePreference] = useState<'male' | 'female'>(profile?.voicePreference || 'female');
 
@@ -1473,6 +1479,26 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               Note: Voice availability depends on your browser and operating system.
             </p>
           </div>
+
+          {profile?.isPremium && (
+            <div className="pt-4 border-t border-slate-200">
+              <label className="block text-sm font-medium text-slate-700 mb-2">Face ID Login</label>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-slate-600">
+                  Status: <strong className={profile.faceIdEnabled ? 'text-emerald-600' : 'text-slate-500'}>
+                    {profile.faceIdEnabled ? 'Enabled' : 'Disabled'}
+                  </strong>
+                </span>
+              </div>
+              <button
+                onClick={onOpenFaceIdSetup}
+                className="w-full py-2 px-4 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <ScanFace className="w-4 h-4" />
+                {profile.faceIdEnabled ? 'Change Face ID Image' : 'Set Up Face ID'}
+              </button>
+            </div>
+          )}
           
           <button 
             onClick={handleSave}

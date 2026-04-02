@@ -214,7 +214,6 @@ export default function Login() {
                 <input
                   type="file"
                   accept="image/*"
-                  capture="user"
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleImageCapture}

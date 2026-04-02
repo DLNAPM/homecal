@@ -156,7 +156,6 @@ export default function FaceIdSetupModal({ onClose }: { onClose: () => void }) {
                 <input
                   type="file"
                   accept="image/*"
-                  capture="user"
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleImageUpload}
