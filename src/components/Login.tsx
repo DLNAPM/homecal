@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { LogIn, ScanFace, Calendar, UserCircle, HelpCircle, Mic, Sparkles, Link as LinkIcon, LockOpen } from 'lucide-react';
 import HelpModal from './HelpModal';
+import { GoogleGenAI } from '@google/genai';
 
 export default function Login() {
   const { signInWithGoogle, signInAsGuest, loading, isFaceLocked, isBackgroundLocked, unlockWithFaceId, unlockBackground, signOut, profile } = useAuth();
   const [error, setError] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGoogleLogin = async () => {
     try {
@@ -31,14 +33,103 @@ export default function Login() {
 
   const handleFaceLogin = () => {
     if (isFaceLocked) {
-      setIsScanning(true);
-      // Simulate face scan delay
-      setTimeout(() => {
-        setIsScanning(false);
+      if (!profile?.faceIdImage) {
+        // Fallback if they somehow locked it without an image
         unlockWithFaceId();
-      }, 1500);
+        return;
+      }
+      fileInputRef.current?.click();
     } else {
       alert('Facial Recognition is a Premium Feature. Please login with Google first to upgrade your account.');
+    }
+  };
+
+  const handleImageCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profile?.faceIdImage) return;
+
+    setIsScanning(true);
+    setError('');
+
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+          img.onerror = reject;
+          img.src = event.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const capturedImageBase64 = await base64Promise;
+      
+      // Extract base64 data without the data URL prefix
+      const capturedData = capturedImageBase64.split(',')[1];
+      const storedData = profile.faceIdImage.split(',')[1];
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-preview',
+        contents: [
+          {
+            inlineData: {
+              data: storedData,
+              mimeType: 'image/jpeg' // Assuming jpeg/png, Gemini handles standard image types
+            }
+          },
+          {
+            inlineData: {
+              data: capturedData,
+              mimeType: file.type || 'image/jpeg'
+            }
+          },
+          "Are these two images of the same person? Reply with only YES or NO."
+        ]
+      });
+
+      const result = response.text?.trim().toUpperCase();
+      
+      if (result === 'YES') {
+        unlockWithFaceId();
+      } else {
+        setError('Face not recognized. Please try again.');
+      }
+    } catch (err) {
+      console.error('Face comparison error:', err);
+      setError('Failed to verify face. Please try again.');
+    } finally {
+      setIsScanning(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -113,6 +204,22 @@ export default function Login() {
                     <ScanFace className={`w-12 h-12 ${isScanning ? 'animate-bounce' : ''}`} />
                   </div>
                 </div>
+                
+                {error && (
+                  <div className="mb-6 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100 text-center">
+                    {error}
+                  </div>
+                )}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleImageCapture}
+                />
+
                 <button
                   onClick={handleFaceLogin}
                   disabled={isScanning}

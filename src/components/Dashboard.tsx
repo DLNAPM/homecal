@@ -14,6 +14,7 @@ import PendingInvites from './PendingInvites';
 import HelpModal from './HelpModal';
 import GroupsModal from './GroupsModal';
 import AdminModal from './AdminModal';
+import FaceIdSetupModal from './FaceIdSetupModal';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -34,11 +35,20 @@ export default function Dashboard() {
   const [showSmartAddModal, setShowSmartAddModal] = useState(false);
   const [showGreetingModal, setShowGreetingModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showFaceIdSetup, setShowFaceIdSetup] = useState(false);
   const [greetingData, setGreetingData] = useState<{ message: string, todayEvents: any[], weekEvents: any[] } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const handleFaceIdClick = () => {
+    if (!profile?.faceIdEnabled) {
+      setShowFaceIdSetup(true);
+    } else {
+      lockWithFaceId();
+    }
+  };
 
   const applyVoice = (utterance: SpeechSynthesisUtterance) => {
     const voices = window.speechSynthesis.getVoices();
@@ -268,7 +278,7 @@ export default function Dashboard() {
                 <img src={profile.photoURL} alt="Profile" className="h-8 w-8 rounded-full border border-slate-200 shrink-0" referrerPolicy="no-referrer" />
               )}
               {profile?.isPremium && (
-                <button onClick={lockWithFaceId} className="p-2 text-slate-500 hover:text-indigo-600 transition-colors shrink-0" title="Lock with Face ID">
+                <button onClick={handleFaceIdClick} className="p-2 text-slate-500 hover:text-indigo-600 transition-colors shrink-0" title="Lock with Face ID">
                   <ScanFace className="h-5 w-5" />
                 </button>
               )}
@@ -407,6 +417,7 @@ export default function Dashboard() {
       {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
       {showGroups && <GroupsModal onClose={() => setShowGroups(false)} />}
       {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
+      {showFaceIdSetup && <FaceIdSetupModal onClose={() => setShowFaceIdSetup(false)} />}
 
       <PendingInvites />
 
