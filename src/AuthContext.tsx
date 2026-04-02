@@ -9,12 +9,15 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   isFaceLocked: boolean;
+  isBackgroundLocked: boolean;
   signInWithGoogle: () => Promise<void>;
   signInAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   lockWithFaceId: () => void;
   unlockWithFaceId: () => void;
+  lockBackground: () => void;
+  unlockBackground: () => void;
   connectGoogleCalendar: () => Promise<void>;
 }
 
@@ -27,6 +30,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isFaceLocked, setIsFaceLocked] = useState(() => {
     return localStorage.getItem('isFaceLocked') === 'true';
   });
+  const [isBackgroundLocked, setIsBackgroundLocked] = useState(() => {
+    return localStorage.getItem('isBackgroundLocked') === 'true';
+  });
 
   const lockWithFaceId = () => {
     setIsFaceLocked(true);
@@ -36,6 +42,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const unlockWithFaceId = () => {
     setIsFaceLocked(false);
     localStorage.removeItem('isFaceLocked');
+  };
+
+  const lockBackground = () => {
+    setIsBackgroundLocked(true);
+    localStorage.setItem('isBackgroundLocked', 'true');
+  };
+
+  const unlockBackground = () => {
+    setIsBackgroundLocked(false);
+    localStorage.removeItem('isBackgroundLocked');
   };
 
   useEffect(() => {
@@ -141,6 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     unlockWithFaceId();
+    unlockBackground();
     if (user?.isAnonymous) {
       setUser(null);
       setProfile(null);
@@ -157,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isFaceLocked, signInWithGoogle, signInAsGuest, signOut, updateProfile, lockWithFaceId, unlockWithFaceId, connectGoogleCalendar }}>
+    <AuthContext.Provider value={{ user, profile, loading, isFaceLocked, isBackgroundLocked, signInWithGoogle, signInAsGuest, signOut, updateProfile, lockWithFaceId, unlockWithFaceId, lockBackground, unlockBackground, connectGoogleCalendar }}>
       {children}
     </AuthContext.Provider>
   );

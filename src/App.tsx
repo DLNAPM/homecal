@@ -8,9 +8,10 @@ import { AuthProvider, useAuth } from './AuthContext';
 import { CalendarProvider } from './CalendarContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import ReminderSystem from './components/ReminderSystem';
 
 function AppContent() {
-  const { user, loading, isFaceLocked } = useAuth();
+  const { user, loading, isFaceLocked, isBackgroundLocked } = useAuth();
 
   if (loading) {
     return (
@@ -20,12 +21,19 @@ function AppContent() {
     );
   }
 
-  return (user && !isFaceLocked) ? (
-    <CalendarProvider>
-      <Dashboard />
-    </CalendarProvider>
-  ) : (
-    <Login />
+  const isLocked = isFaceLocked || isBackgroundLocked;
+
+  return (
+    <>
+      {user ? (
+        <CalendarProvider>
+          {isLocked ? <Login /> : <Dashboard />}
+          <ReminderSystem />
+        </CalendarProvider>
+      ) : (
+        <Login />
+      )}
+    </>
   );
 }
 

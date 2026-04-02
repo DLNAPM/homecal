@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useCalendar } from '../CalendarContext';
-import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle, Users, Shield, ScanFace } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, Mic, Plus, Share2, Settings, Volume2, Upload, FileJson, FileSpreadsheet, FileText, Link, Sparkles, HelpCircle, Users, Shield, ScanFace, Lock } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
@@ -10,7 +10,6 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import AnimatedAvatar from './AnimatedAvatar';
 import UploadModal from './UploadModal';
 import SmartAddModal from './SmartAddModal';
-import ReminderSystem from './ReminderSystem';
 import PendingInvites from './PendingInvites';
 import HelpModal from './HelpModal';
 import GroupsModal from './GroupsModal';
@@ -21,7 +20,7 @@ import Papa from 'papaparse';
 const localizer = momentLocalizer(moment);
 
 export default function Dashboard() {
-  const { user, profile, signOut, updateProfile, lockWithFaceId } = useAuth();
+  const { user, profile, signOut, updateProfile, lockWithFaceId, lockBackground } = useAuth();
   const { events, loading, addEvent } = useCalendar();
   const [greetingShown, setGreetingShown] = useState(false);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
@@ -273,7 +272,10 @@ export default function Dashboard() {
                   <ScanFace className="h-5 w-5" />
                 </button>
               )}
-              <button onClick={signOut} className="text-slate-500 hover:text-red-600 transition-colors" title="Sign Out">
+              <button onClick={lockBackground} className="text-slate-500 hover:text-amber-600 transition-colors" title="Background Logout (Keep Alerts Active)">
+                <Lock className="h-5 w-5" />
+              </button>
+              <button onClick={signOut} className="text-slate-500 hover:text-red-600 transition-colors" title="Sign Out Completely">
                 <LogOut className="h-5 w-5" />
               </button>
             </div>
@@ -406,7 +408,6 @@ export default function Dashboard() {
       {showGroups && <GroupsModal onClose={() => setShowGroups(false)} />}
       {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
 
-      <ReminderSystem />
       <PendingInvites />
 
       <AnimatedAvatar isSpeaking={isSpeaking} />

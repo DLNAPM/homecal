@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { LogIn, ScanFace, Calendar, UserCircle, HelpCircle, Mic, Sparkles, Link as LinkIcon } from 'lucide-react';
+import { LogIn, ScanFace, Calendar, UserCircle, HelpCircle, Mic, Sparkles, Link as LinkIcon, LockOpen } from 'lucide-react';
 import HelpModal from './HelpModal';
 
 export default function Login() {
-  const { signInWithGoogle, signInAsGuest, loading, isFaceLocked, unlockWithFaceId, signOut, profile } = useAuth();
+  const { signInWithGoogle, signInAsGuest, loading, isFaceLocked, isBackgroundLocked, unlockWithFaceId, unlockBackground, signOut, profile } = useAuth();
   const [error, setError] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -41,6 +41,8 @@ export default function Login() {
       alert('Facial Recognition is a Premium Feature. Please login with Google first to upgrade your account.');
     }
   };
+
+  const isLocked = isFaceLocked || isBackgroundLocked;
 
   if (loading) {
     return (
@@ -90,10 +92,10 @@ export default function Login() {
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-8">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-slate-900">
-              {isFaceLocked ? 'Welcome Back' : 'Get Started'}
+              {isLocked ? 'Welcome Back' : 'Get Started'}
             </h2>
             <p className="text-slate-500 mt-2">
-              {isFaceLocked ? `Unlock to access your calendar` : 'Sign in to access your calendar'}
+              {isLocked ? `Unlock to access your calendar` : 'Sign in to access your calendar'}
             </p>
           </div>
 
@@ -118,6 +120,30 @@ export default function Login() {
                 >
                   <ScanFace className="w-5 h-5" />
                   {isScanning ? 'Scanning Face...' : 'Unlock with Face ID'}
+                </button>
+                <button
+                  onClick={signOut}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors font-medium shadow-sm"
+                >
+                  Sign Out Completely
+                </button>
+              </>
+            ) : isBackgroundLocked ? (
+              <>
+                <div className="flex justify-center mb-8">
+                  <div className="w-24 h-24 rounded-full flex items-center justify-center bg-amber-100 text-amber-600">
+                    <Calendar className="w-12 h-12" />
+                  </div>
+                </div>
+                <p className="text-center text-sm text-slate-500 mb-6">
+                  App is running in the background to receive alerts.
+                </p>
+                <button
+                  onClick={unlockBackground}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                >
+                  <LockOpen className="w-5 h-5" />
+                  Unlock App
                 </button>
                 <button
                   onClick={signOut}

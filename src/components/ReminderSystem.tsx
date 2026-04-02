@@ -1,13 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { CalendarEvent } from '../types';
 import { useCalendar } from '../CalendarContext';
-import { Bell, Clock, Check } from 'lucide-react';
+import { useAuth } from '../AuthContext';
+import { Bell, Clock, Check, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function ReminderSystem() {
   const { events, updateEvent } = useCalendar();
+  const { isFaceLocked, isBackgroundLocked } = useAuth();
   const [activeReminders, setActiveReminders] = useState<CalendarEvent[]>([]);
   const activeChimesRef = useRef<{ [eventId: string]: { stop: () => void } }>({});
+
+  const isLocked = isFaceLocked || isBackgroundLocked;
 
   const playChimeForEvent = (eventId: string) => {
     if (activeChimesRef.current[eventId]) return;
