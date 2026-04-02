@@ -8,6 +8,7 @@ export default function FaceIdSetupModal({ onClose }: { onClose: () => void }) {
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleConsent = (approved: boolean) => {
     if (approved) {
@@ -160,12 +161,27 @@ export default function FaceIdSetupModal({ onClose }: { onClose: () => void }) {
                   ref={fileInputRef}
                   onChange={handleImageUpload}
                 />
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  className="hidden"
+                  ref={cameraInputRef}
+                  onChange={handleImageUpload}
+                />
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                >
+                  <Camera className="w-8 h-8" />
+                  <span className="font-medium">Take a Picture</span>
+                </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
                 >
-                  <Camera className="w-8 h-8" />
-                  <span className="font-medium">Take Picture or Upload</span>
+                  <Upload className="w-8 h-8" />
+                  <span className="font-medium">Upload an Image</span>
                 </button>
               </div>
             )}
