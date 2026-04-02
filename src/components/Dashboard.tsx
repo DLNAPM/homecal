@@ -1279,7 +1279,7 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
       }));
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.1-pro-preview',
         contents: `Process the following voice command to manage calendar events. The user might want to add new events, update existing events (like adding reminders), or delete events. 
         Today is ${now.toISOString()}. 
         
@@ -1290,7 +1290,8 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
         
         Return an array of operations. Each operation must have an 'action' ('create', 'update', or 'delete').
         For 'update' or 'delete', provide the 'eventId' matching an existing event.
-        For 'create' or 'update', provide 'eventData' with the relevant fields.`,
+        For 'create', you MUST provide 'eventData' containing at least 'title' and 'startTime' (as an ISO string).
+        For 'update', provide 'eventData' with the fields to change.`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1304,8 +1305,8 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
                   type: Type.OBJECT,
                   properties: {
                     title: { type: Type.STRING },
-                    startTime: { type: Type.STRING },
-                    endTime: { type: Type.STRING },
+                    startTime: { type: Type.STRING, description: "ISO 8601 date string" },
+                    endTime: { type: Type.STRING, description: "ISO 8601 date string" },
                     description: { type: Type.STRING },
                     comment: { type: Type.STRING },
                     reminderMinutes: { type: Type.NUMBER },
@@ -1346,8 +1347,13 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
       for (const op of eventsData) {
         if (op.action === 'create' && op.eventData) {
           const newEvent: any = { ...op.eventData };
-          if (newEvent.startTime) newEvent.startTime = new Date(newEvent.startTime);
+          if (newEvent.startTime) {
+            newEvent.startTime = new Date(newEvent.startTime);
+          } else {
+            newEvent.startTime = new Date();
+          }
           if (newEvent.endTime) newEvent.endTime = new Date(newEvent.endTime);
+          if (!newEvent.title) newEvent.title = 'New Event';
           await addEvent(newEvent);
           createdCount++;
         } else if (op.action === 'update' && op.eventId && op.eventData) {
