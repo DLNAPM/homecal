@@ -33,6 +33,7 @@ export default function HelpModal({ onClose }: HelpModalProps) {
       `;
       
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      (window as any).currentUtterance = utterance; // Prevent garbage collection
       utterance.onend = () => setIsDictating(false);
       utterance.onerror = () => setIsDictating(false);
       

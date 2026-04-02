@@ -99,6 +99,7 @@ export default function Dashboard() {
           }
           
           const utterance = new SpeechSynthesisUtterance(text[currentIndex]);
+          (window as any).currentUtterance = utterance; // Prevent garbage collection
           applyVoice(utterance);
           utterance.onstart = () => setIsSpeaking(true);
           utterance.onend = () => {
@@ -121,6 +122,7 @@ export default function Dashboard() {
         playNext();
       } else {
         const utterance = new SpeechSynthesisUtterance(text);
+        (window as any).currentUtterance = utterance; // Prevent garbage collection
         applyVoice(utterance);
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => {
@@ -149,9 +151,14 @@ export default function Dashboard() {
 
     const today = format(new Date(), 'yyyy-MM-dd');
     if (profile.lastGreetingDate !== today) {
-      const todayEvents = events.filter(e => isToday(e.startTime));
+      const now = new Date();
+      const todayEvents = events
+        .filter(e => isToday(e.startTime))
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
       const message = `Hello ${profile.displayName || 'User'}, How are you today? You have ${todayEvents.length} appointments today. Do you want to hear your appointments for today?`;
-      const weekEvents = events.filter(e => isThisWeek(e.startTime) && !isToday(e.startTime));
+      const weekEvents = events
+        .filter(e => isThisWeek(e.startTime) && !isToday(e.startTime) && e.startTime >= now)
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
       
       setGreetingData({ message, todayEvents, weekEvents });
       setShowGreetingModal(true);
