@@ -1204,7 +1204,7 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
   const [transcript, setTranscript] = useState('');
   const [processing, setProcessing] = useState(false);
   const transcriptRef = useRef('');
-  const { addEvent } = useCalendar();
+  const { events, addEvent, updateEvent, deleteEvent } = useCalendar();
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window)) {
@@ -1253,10 +1253,27 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const now = new Date();
       
+      const simplifiedEvents = events.map(e => ({
+        id: e.id,
+        title: e.title,
+        startTime: e.startTime.toISOString(),
+        endTime: e.endTime ? e.endTime.toISOString() : null,
+        reminderMinutes: e.reminderMinutes
+      }));
+
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Parse this voice command into calendar events. If multiple days or distinct events are mentioned, create multiple events. Today is ${now.toISOString()}. 
-        Command: "${text}"`,
+        contents: `Process the following voice command to manage calendar events. The user might want to add new events, update existing events (like adding reminders), or delete events. 
+        Today is ${now.toISOString()}. 
+        
+        Here are the user's current events:
+        ${JSON.stringify(simplifiedEvents, null, 2)}
+        
+        Command: "${text}"
+        
+        Return an array of operations. Each operation must have an 'action' ('create', 'update', or 'delete').
+        For 'update' or 'delete', provide the 'eventId' matching an existing event.
+        For 'create' or 'update', provide 'eventData' with the relevant fields.`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: {
@@ -1264,13 +1281,22 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
             items: {
               type: Type.OBJECT,
               properties: {
-                title: { type: Type.STRING, description: 'The title of the event' },
-                description: { type: Type.STRING, description: 'Optional description' },
-                comment: { type: Type.STRING, description: 'Extra details or comments about the event' },
-                startTimeISO: { type: Type.STRING, description: 'ISO 8601 start time' },
-                endTimeISO: { type: Type.STRING, description: 'ISO 8601 end time (optional)' }
+                action: { type: Type.STRING, description: "'create', 'update', or 'delete'" },
+                eventId: { type: Type.STRING, description: "The ID of the event to update or delete." },
+                eventData: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    startTime: { type: Type.STRING },
+                    endTime: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    comment: { type: Type.STRING },
+                    reminderMinutes: { type: Type.NUMBER },
+                    reminderChime: { type: Type.BOOLEAN }
+                  }
+                }
               },
-              required: ['title', 'startTimeISO']
+              required: ["action"]
             }
           }
         }
@@ -1290,26 +1316,44 @@ function VoiceAssistantModal({ onClose, speak }: { onClose: () => void, speak: (
       const parsed = JSON.parse(responseText);
       const eventsData = Array.isArray(parsed) ? parsed : [parsed];
       
-      for (const evtData of eventsData) {
-        if (!evtData.title && !evtData.startTimeISO && eventsData.length === 1) {
-           evtData.title = text || 'New Voice Appointment';
-        }
-        
-        const event = {
-          title: evtData.title || 'New Voice Appointment',
-          description: evtData.description || '',
-          comment: evtData.comment || '',
-          startTime: evtData.startTimeISO ? new Date(evtData.startTimeISO) : new Date(now.getTime() + 60 * 60 * 1000),
-          endTime: evtData.endTimeISO ? new Date(evtData.endTimeISO) : undefined,
-        };
+      if (eventsData.length === 0 || (eventsData.length === 1 && !eventsData[0].action)) {
+        speak("I couldn't understand what you wanted to do with your calendar.");
+        onClose();
+        return;
+      }
 
-        await addEvent(event);
+      let createdCount = 0;
+      let updatedCount = 0;
+      let deletedCount = 0;
+
+      for (const op of eventsData) {
+        if (op.action === 'create' && op.eventData) {
+          const newEvent: any = { ...op.eventData };
+          if (newEvent.startTime) newEvent.startTime = new Date(newEvent.startTime);
+          if (newEvent.endTime) newEvent.endTime = new Date(newEvent.endTime);
+          await addEvent(newEvent);
+          createdCount++;
+        } else if (op.action === 'update' && op.eventId && op.eventData) {
+          const updates: any = { ...op.eventData };
+          if (updates.startTime) updates.startTime = new Date(updates.startTime);
+          if (updates.endTime) updates.endTime = new Date(updates.endTime);
+          await updateEvent(op.eventId, updates);
+          updatedCount++;
+        } else if (op.action === 'delete' && op.eventId) {
+          await deleteEvent(op.eventId);
+          deletedCount++;
+        }
       }
       
-      if (eventsData.length > 1) {
-        speak(`I've added ${eventsData.length} events to your calendar.`);
-      } else if (eventsData.length === 1) {
-        speak(`I've added ${eventsData[0].title || 'the event'} to your calendar.`);
+      const summaryParts = [];
+      if (createdCount > 0) summaryParts.push(`added ${createdCount} event${createdCount > 1 ? 's' : ''}`);
+      if (updatedCount > 0) summaryParts.push(`updated ${updatedCount} event${updatedCount > 1 ? 's' : ''}`);
+      if (deletedCount > 0) summaryParts.push(`deleted ${deletedCount} event${deletedCount > 1 ? 's' : ''}`);
+      
+      if (summaryParts.length > 0) {
+        speak(`I've ${summaryParts.join(', and ')}.`);
+      } else {
+        speak("I didn't make any changes to your calendar.");
       }
       
       setTimeout(() => {
