@@ -24,10 +24,11 @@ export default function HelpModal({ onClose }: HelpModalProps) {
         Description: HomeCal is an AI-powered calendar and scheduling assistant designed to help you manage your appointments, dictate your agenda, and seamlessly organize your life using natural language and voice commands.
         How to Use:
         1. Connect: Link your existing calendars via the Integrations menu.
-        2. Interact: Use the voice assistant to add events or ask about your schedule.
+        2. Interact: Use the voice assistant to add events or ask about your schedule. The Avatar can be dragged around the screen to stay out of your way.
         3. Manage: View your schedule in Month, Week, or Day views.
         4. Groups and Sharing: Create groups to easily share events with multiple people at once.
         5. Automate: Upload documents or use Smart Add to automatically extract and schedule events.
+        6. Security and Background Alerts: Lock the app with Face ID or use the Background Logout feature to keep event alerts active while securing your data.
         Intended Audience: This app is designed for professionals, individuals with busy schedules, and anyone looking for hands-free, AI-assisted calendar management.
         Disclaimer: This application is intended for personal and professional scheduling assistance only. It is not intended for storing highly sensitive medical records, confidential financial data, or serving as a sole system of record for critical life-safety events. AI features may occasionally misinterpret voice or text inputs; always verify important appointments independently.
       `;
@@ -93,10 +94,11 @@ export default function HelpModal({ onClose }: HelpModalProps) {
             <h3 className="text-xl font-semibold text-slate-900 mb-2">How to Use</h3>
             <ol className="list-decimal pl-5 space-y-2">
               <li><strong>Connect:</strong> Link your existing calendars (Google, Apple, Microsoft) via the Integrations menu.</li>
-              <li><strong>Interact:</strong> Use the voice assistant (microphone icon) to add events or ask about your schedule.</li>
+              <li><strong>Interact:</strong> Use the voice assistant (microphone icon) to add events or ask about your schedule. The Avatar can be dragged around the screen to stay out of your way.</li>
               <li><strong>Manage:</strong> View your schedule in Month, Week, or Day views. Click on dates with blue dots to see details.</li>
               <li><strong>Groups & Sharing:</strong> Create groups (Users icon) to easily share events with multiple people at once. You can even set a group to automatically receive all your events.</li>
               <li><strong>Automate:</strong> Upload documents or use Smart Add to automatically extract and schedule events.</li>
+              <li><strong>Security & Background Alerts:</strong> Lock the app with Face ID or use the Background Logout feature to keep event alerts active while securing your data.</li>
             </ol>
           </section>
 

@@ -233,6 +233,39 @@ export default function Login() {
                 Connect your existing Google, Apple, or Microsoft calendars. Keep all your schedules synchronized in one beautiful, intelligent dashboard.
               </p>
             </div>
+
+            {/* Feature 4 */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+              <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6">
+                <ScanFace className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Biometric Security</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Keep your schedule private with premium Face ID locking. Secure your data while maintaining quick access to your calendar.
+              </p>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+              <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mb-6">
+                <LockOpen className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Persistent Alerts</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Use the Background Logout feature to secure your app while still receiving crucial event pop-ups and chimes when you need them.
+              </p>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6">
+                <UserCircle className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Collaborative Scheduling</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Create groups and share events effortlessly. Track who has acknowledged your invitations and manage pending invites in one place.
+              </p>
+            </div>
           </div>
         </div>
       </section>
