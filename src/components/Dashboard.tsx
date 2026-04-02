@@ -402,9 +402,7 @@ export default function Dashboard() {
       <ReminderSystem />
       <PendingInvites />
 
-      <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
-        <AnimatedAvatar isSpeaking={isSpeaking} />
-      </div>
+      <AnimatedAvatar isSpeaking={isSpeaking} />
     </div>
   );
 }

@@ -1,14 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 
 export default function AnimatedAvatar({ isSpeaking }: { isSpeaking: boolean }) {
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1000,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1000,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
-    <div className={`relative transition-transform duration-300 ${isSpeaking ? 'scale-110' : 'scale-100'}`}>
+    <motion.div 
+      className={`fixed bottom-6 right-6 z-50 cursor-grab active:cursor-grabbing transition-transform duration-300 ${isSpeaking ? 'scale-110' : 'scale-100'}`}
+      drag
+      dragConstraints={{ 
+        left: -windowSize.width + 120, 
+        right: 0, 
+        top: -windowSize.height + 120, 
+        bottom: 0 
+      }}
+      dragElastic={0.1}
+      dragMomentum={false}
+      whileHover={{ scale: isSpeaking ? 1.15 : 1.05 }}
+      whileTap={{ scale: 0.95 }}
+    >
       {isSpeaking && (
-        <div className="absolute -top-8 -left-4 bg-white px-3 py-1 rounded-full shadow-md text-xs font-bold text-blue-600 animate-bounce whitespace-nowrap">
+        <div className="absolute -top-8 -left-4 bg-white px-3 py-1 rounded-full shadow-md text-xs font-bold text-blue-600 animate-bounce whitespace-nowrap pointer-events-none">
           Speaking...
         </div>
       )}
-      <svg width="120" height="120" viewBox="0 0 120 120" className={isSpeaking ? 'animate-[bob_1s_ease-in-out_infinite]' : ''}>
+      <svg width="120" height="120" viewBox="0 0 120 120" className={`pointer-events-none ${isSpeaking ? 'animate-[bob_1s_ease-in-out_infinite]' : ''}`}>
         <style>
           {`
             @keyframes talk {
@@ -65,6 +95,6 @@ export default function AnimatedAvatar({ isSpeaking }: { isSpeaking: boolean }) 
         <rect x="14" y="40" width="6" height="40" rx="3" fill="#1d4ed8" />
         <rect x="100" y="40" width="6" height="40" rx="3" fill="#1d4ed8" />
       </svg>
-    </div>
+    </motion.div>
   );
 }
