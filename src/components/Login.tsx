@@ -97,27 +97,33 @@ export default function Login() {
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-preview',
+        model: 'gemini-3.1-pro-preview',
         contents: [
           {
             inlineData: {
               data: storedData,
-              mimeType: 'image/jpeg' // Assuming jpeg/png, Gemini handles standard image types
+              mimeType: 'image/jpeg'
             }
           },
           {
             inlineData: {
               data: capturedData,
-              mimeType: file.type || 'image/jpeg'
+              mimeType: 'image/jpeg'
             }
           },
-          "Are these two images of the same person? Reply with only YES or NO."
+          "Are these two images of the exact same person? (Even if they are the exact same image, answer YES). Reply with ONLY the word YES or NO. Do not include any other text."
         ]
       });
 
-      const result = response.text?.trim().toUpperCase();
+      const result = response.text?.trim().toUpperCase() || '';
+      console.log('Face comparison result:', result);
       
-      if (result === 'YES') {
+      // Check if it starts with YES or is exactly YES, or contains YES and not NO
+      const isMatch = result === 'YES' || 
+                      result.startsWith('YES') || 
+                      (result.includes('YES') && !result.includes('NO'));
+      
+      if (isMatch) {
         unlockWithFaceId();
       } else {
         setError('Face not recognized. Please try again.');
